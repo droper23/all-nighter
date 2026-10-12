@@ -36,7 +36,7 @@ export class Ending extends Phaser.Scene {
     this.drawSky(0);
     this.body = shadowText(this, 40, 60, '', C.text);
     this.hint = text(this, W - 70, H - 14, 'Z: next', C.dim);
-    audio.play('ending');
+    audio.ambient(null); audio.play('ending');
     this.cameras.main.fadeIn(1500, 255, 255, 255);
     this.showPage();
   }

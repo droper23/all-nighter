@@ -31,7 +31,8 @@ export class Battle extends Phaser.Scene {
     this.logText = shadowText(this, W / 2, 30, '', C.text).setDepth(600);
     this.buildPanel();
     this.refresh();
-    audio.play(data.music || (data.boss ? 'boss' : 'battle'));
+    const KEY = { lobby: 0, labs: 2, servers: -3, archive: -5, tunnels: 1, core: -2, void: -6 };
+    audio.play(data.music || (data.boss ? 'boss' : 'battle'), { transpose: data.music === 'final' ? 0 : KEY[data.bg] || 0 });
     this.cameras.main.fadeIn(200, 255, 255, 255);
     const intro = data.preempt === 'player' ? 'First strike! You caught them off guard.' : data.preempt === 'enemy' ? 'Ambushed from behind!' : (data.boss ? '' : 'Glitches materialize!');
     this.setLog(intro);
@@ -144,6 +145,8 @@ export class Battle extends Phaser.Scene {
       if (u.side === 'enemy' && u.intent) this.drawIntent(g, u, sp.home.x, Math.max(44, top - 8), crowd);
     }
     this.drawTimeline();
+    const boss = this.eng.enemies.find(u => u.boss);
+    audio.setIntensity(p.hp < p.maxHp * 0.35 ? 2 : boss && (boss.mem.phase || boss.mem.p2 || boss.hp < boss.maxHp * 0.5) ? 1 : 0);
   }
   // Status chips: colored tag + turns left.
   chips(g, x, y, u, maxW, centered = false) {

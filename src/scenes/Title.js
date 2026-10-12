@@ -48,7 +48,7 @@ export class Title extends Phaser.Scene {
     this.started = true;
     if (this.prompt) { this.prompt.destroy(); this.prompt = null; }
     audio.unlock(); G.unlocked = true;
-    audio.play('title');
+    audio.ambient(null); audio.play('title');
     this.openRoot();
   }
   clear() { this.objs.forEach(o => o.destroy()); this.objs = []; if (this.list) this.list.destroy(); this.list = null; }

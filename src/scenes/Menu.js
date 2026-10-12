@@ -42,7 +42,7 @@ export class Menu extends Phaser.Scene {
     else if (data.tab === 'map') this.openMap(true);
     else this.openMain();
   }
-  clear() { this.objs.forEach(o => o.destroy()); this.objs = []; if (this.list) this.list.destroy(); if (this.list2) this.list2.destroy(); this.list = null; this.list2 = null; this.settingsAdjust = null; if (this.infoObjs) { this.infoObjs.forEach(o => o.destroy()); this.infoObjs = null; } if (this.descObj) { this.descObj.destroy(); this.descObj = null; } this.sparks = []; this.fan = null; this.selG = null; this.youDot = null; }
+  clear() { this.objs.forEach(o => o.destroy()); this.objs = []; if (this.list) this.list.destroy(); if (this.list2) this.list2.destroy(); this.list = null; this.list2 = null; this.settingsAdjust = null; if (this.infoObjs) { this.infoObjs.forEach(o => o.destroy()); this.infoObjs = null; } if (this.descObj) { this.descObj.destroy(); this.descObj = null; } this.sparks = []; this.fan = null; this.selG = null; this.youDot = null; (this.totalObjs || []).forEach(o => o.destroy()); this.totalObjs = []; this.leds = []; this.gpuFans = []; }
   o(obj) { this.objs.push(obj); return obj; }
   close() { audio.sfx('back'); this.scene.resume('World'); this.scene.stop(); }
 
@@ -86,6 +86,18 @@ export class Menu extends Phaser.Scene {
     this.hot = this.hot || 'cpu';
     this.drawBoard();
     this.drawBuildInfo();
+    if (this.justInstalled) { this.installFx(HOT[this.justInstalled]); this.justInstalled = null; }
+  }
+  // A part clicks in: power sweeps from the PSU, the slot flashes and its LED lights.
+  installFx(h) {
+    const ps = HOT.psu, cx = h.x + h.w / 2, cy = h.y + h.h / 2;
+    for (let i = 0; i < 8; i++) {
+      const d = this.o(this.add.rectangle(ps.x + ps.w / 2, ps.y + ps.h / 2, 2, 2, 0x5ee0e8));
+      this.tweens.add({ targets: d, x: cx + (Math.random() - 0.5) * h.w * 0.6, y: cy + (Math.random() - 0.5) * h.h * 0.6, delay: i * 35, duration: 260, ease: 'quad.in', onComplete: () => d.setVisible(false) });
+    }
+    const flash = this.o(this.add.rectangle(cx, cy, h.w + 4, h.h + 4, 0xffffff, 0.8));
+    this.tweens.add({ targets: flash, alpha: 0, delay: 280, duration: 300 });
+    this.time.delayedCall(280, () => { audio.sfx('select'); this.cameras.main.shake(80, 0.003); });
   }
   drawBoard() {
     const s = G.state, g = this.o(this.add.graphics());
@@ -123,6 +135,36 @@ export class Menu extends Phaser.Scene {
       const tierCol = inst ? toInt(TIERS[PARTS[inst.id].tier].color) : 0x4a4860;
       this.drawSlot(g, key, h, inst, tierCol, locked);
     }
+    // power cabling (sleeved) from the PSU to installed parts
+    const has = (k) => { const h = HOT[k]; const uid = h.i == null ? s.build[h.slot] : s.build[h.slot][h.i]; return !!(uid && partOf(s, uid)); };
+    const cable = (pts, col) => {
+      const path = (w, c, a, dy = 0) => { g.lineStyle(w, c, a); g.beginPath(); g.moveTo(pts[0][0], pts[0][1] + dy); pts.slice(1).forEach(([x, y]) => g.lineTo(x, y + dy)); g.strokePath(); };
+      path(4, 0x0d0b14, 1); path(2, col, 1); path(1, 0xffffff, 0.3, -1);
+      const [ex, ey] = pts[pts.length - 1]; g.fillStyle(0x1c1a2b, 1).fillRect(ex - 3, ey - 2, 6, 4); g.fillStyle(col, 1).fillRect(ex - 2, ey - 1, 4, 1);
+    };
+    if (has('psu')) {
+      cable([[58, 58], [70, 58], [80, 62]], 0xffe08a);
+      if (has('cpu')) cable([[36, 44], [36, 30], [104, 30], [104, 40]], 0xe0485e);
+      if (has('gpu')) cable([[58, 82], [64, 82], [64, 146], [70, 150]], 0xf08a3c);
+    }
+    // status LEDs: lit when a slot is filled
+    this.leds = [];
+    for (const [key, h] of Object.entries(HOT)) {
+      if (h.slot === 'ram' && h.i >= slots) continue;
+      const lx = h.slot === 'ram' ? h.x + 4 : h.slot === 'usb' ? h.x + h.w + 26 : h.x + h.w - 3, ly = h.slot === 'ram' ? h.y - 4 : h.slot === 'usb' ? h.y + 6 : h.y - 4;
+      const on = has(key);
+      g.fillStyle(0x000000, 1).fillRect(lx - 1, ly - 1, 4, 4);
+      const led = this.o(this.add.rectangle(lx + 1, ly + 1, 2, 2, on ? 0x5cc070 : 0x4a1018));
+      if (on) { const glow = this.o(this.add.circle(lx + 1, ly + 1, 4, 0x5cc070, 0.25).setBlendMode('ADD')); this.leds.push({ led, glow, key, t: Math.random() * 1000 }); }
+    }
+    // POST code readout (motherboard debug display)
+    const code = !has('psu') ? '00' : !has('cpu') ? 'C0' : !has('gpu') ? '62' : 'A0';
+    g.fillStyle(0x0d0b14, 1).fillRect(270, 118, 18, 13); g.lineStyle(1, 0x4a4860, 1).strokeRect(270.5, 118.5, 17, 12);
+    this.o(text(this, 273, 121, code, code === 'A0' ? 0x5cc070 : 0xe0485e));
+    this.o(text(this, 268, 133, 'POST', 0x2f7a46));
+    // GPU fans spin with the card in
+    this.gpuFans = [];
+    if (has('gpu')) { const gp = HOT.gpu; for (let i = 0; i < 3; i++) this.gpuFans.push(this.o(this.add.star(gp.x + 30 + i * 60, gp.y + 13, 4, 3, 10, 0x4a4860).setAlpha(0.9))); }
     // selection
     const sel = HOT[this.hot];
     this.selG = this.o(this.add.graphics());
@@ -202,11 +244,22 @@ export class Menu extends Phaser.Scene {
     } else add(text(this, 306, 26, '(empty)', C.dim));
     // totals
     add(panel(this, 6, 192, 468, 72));
-    STAT_LABELS.forEach(([k, l], i) => add(text(this, 14 + (i % 5) * 92, 200 + Math.floor(i / 5) * 12, `${l} ${st[k]}`, C.text)));
-    add(text(this, 14 + 4 * 92, 212, `FORM ${FORMS[st.form].name}`, C.gold));
+    this.drawTotals(st);
     const sets = Object.entries(st.brands).filter(([, n]) => n >= 2).map(([b, n]) => `${BRANDS[b].name} ${n}pc: ${BRANDS[b].two}${n >= 3 ? '; ' + BRANDS[b].three : ''}`);
     add(text(this, 14, 228, wrapText(sets.length ? sets.join(' | ') : 'No brand set bonus. Match 2-3 parts of one brand.', 450).slice(0, 2).join('\n'), sets.length ? C.gold : C.dim));
     add(text(this, 14, 252, 'Arrows: select slot · Z: change · X: back', C.dim));
+  }
+  // Totals panel. With `before`, shows the hovered part's effect: green up, red down.
+  drawTotals(st, before = null) {
+    (this.totalObjs || []).forEach(o => o.destroy());
+    this.totalObjs = [];
+    STAT_LABELS.forEach(([k, l], i) => {
+      const x = 14 + (i % 5) * 92, y = 200 + Math.floor(i / 5) * 12, d = before ? st[k] - before[k] : 0;
+      this.totalObjs.push(text(this, x, y, `${l} ${st[k]}`, d ? (d > 0 ? C.good : C.bad) : C.text).setDepth(5));
+      if (d) this.totalObjs.push(text(this, x + (`${l} ${st[k]}`.length + 1) * 6, y, `${d > 0 ? '▲' : '▼'}${Math.abs(d)}`, d > 0 ? C.good : C.bad).setDepth(5));
+    });
+    const fc = before && before.form !== st.form;
+    this.totalObjs.push(text(this, 14 + 4 * 92, 212, `FORM ${FORMS[st.form].name}`, fc ? C.accent : C.gold).setDepth(5));
   }
   updateBuild(delta) {
     // selection pulse & sparks
@@ -214,6 +267,8 @@ export class Menu extends Phaser.Scene {
     const r = this.selRect, g = this.selG;
     if (g) { g.clear(); g.lineStyle(1, 0xffe08a, 0.6 + 0.4 * Math.sin(this.pulse / 150)).strokeRect(r.x - 2.5, r.y - 2.5, r.w + 5, r.h + 5); }
     if (this.fan) this.fan.rotation += delta / 120;
+    for (const f of this.gpuFans || []) f.rotation += delta / 90;
+    for (const l of this.leds || []) { l.t += delta; const on = (l.t % 1400) < 1250; l.led.setAlpha(on ? 1 : 0.4); l.glow.setAlpha(on ? 0.25 : 0.05); }
     for (const d of this.sparks || []) { d.t = (d.t + delta / 900) % 1; const [x0, y0, x1, y1] = d.path; d.setPosition(x0 + (x1 - x0) * d.t, y0 + (y1 - y0) * d.t); }
     if (this.list2) return this.list2.update(this.keys, delta);
     const d = this.keys.nav(delta);
@@ -243,7 +298,7 @@ export class Menu extends Phaser.Scene {
     this.popList(SLOTS[h.slot].name, items, (it) => {
       if (h.i == null) s.build[h.slot] = it.uid; else s.build[h.slot][h.i] = it.uid;
       const nst = computeStats(s); s.hp = Math.min(s.hp, nst.maxHp);
-      audio.sfx('door'); this.openBuild(this.direct);
+      audio.sfx('door'); if (it.uid) this.justInstalled = this.hot; this.openBuild(this.direct);
     }, (it) => this.preview(h, it.uid, st));
   }
   chooseApp(i) {
@@ -262,6 +317,7 @@ export class Menu extends Phaser.Scene {
     if (h.i == null) s.build[h.slot] = uid; else s.build[h.slot][h.i] = uid;
     const after = computeStats(s);
     if (h.i == null) s.build[h.slot] = saved; else s.build[h.slot][h.i] = saved;
+    this.drawTotals(after, before);
     const diffs = STAT_LABELS.map(([k, l]) => [l, after[k] - before[k]]).filter(([, d]) => d);
     let str = diffs.map(([l, d]) => `${l} ${d > 0 ? '+' : ''}${d}`).join('  ') || 'No stat change';
     if (after.form !== before.form) str += `\nForm → ${FORMS[after.form].name}`;
@@ -277,7 +333,7 @@ export class Menu extends Phaser.Scene {
     if (!items.length) { audio.sfx('error'); return; }
     const pg = panel(this, 298, 6, 176, 110).setDepth(200);
     const tt = text(this, 306, 12, title, C.accent).setDepth(201);
-    const hidden = (this.infoObjs || []).slice(1).filter(o => o.y < 120 && o.setVisible);
+    const hidden = (this.infoObjs || []).filter(o => o.type === 'BitmapText' && o.y < 120);
     hidden.forEach(o => o.setVisible(false));
     const close = () => { hidden.forEach(o => o.active && o.setVisible(true)); pg.destroy(); tt.destroy(); this.list2 && this.list2.destroy(); this.list2 = null; if (this.descObj) { this.descObj.destroy(); this.descObj = null; } };
     this.list2 = new ListMenu(this, 304, 26, 166, items, {

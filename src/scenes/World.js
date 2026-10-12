@@ -12,6 +12,7 @@ import { APPS, ITEMS } from '../data/apps.js';
 import { NOTES } from '../data/notes.js';
 import { openShifts, twistFor } from '../data/shifts.js';
 import { LOOT } from '../data/enemies.js';
+import { addRoomDetails } from './worldfx.js';
 
 const MARKERS = /[0-9ACDEGHIJKNQRUZ@]/;
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -157,6 +158,8 @@ export class World extends Phaser.Scene {
   }
   ambience() {
     const th = this.room.theme;
+    addRoomDetails(this);
+    audio.ambient(this.room.ambient || th);
     const col = { lobby: 0xf08a3c, labs: 0x5ee0e8, servers: 0x8fb0ff, archive: 0xdcb07a, tunnels: 0xf2f0e6, core: 0xd4a0ff, void: 0xffffff }[th] || 0xffffff;
     for (let i = 0; i < 14; i++) {
       const d = this.add.rectangle(Math.random() * this.gw * T, Math.random() * this.gh * T, 1, 1, col, 0.5).setDepth(8000);
@@ -444,6 +447,7 @@ export class World extends Phaser.Scene {
     this.time.delayedCall(340, () => {
       cam.setZoom(1);
       this.scene.sleep();
+      audio.ambient(null);
       this.scene.run('Battle', { group, preempt: opts.preempt, boss: opts.boss, music: opts.music, bg: opts.bg || this.room.theme, canFlee: opts.canFlee !== false && !opts.boss, mods: opts.mods });
     });
   }
@@ -453,6 +457,7 @@ export class World extends Phaser.Scene {
     this.battleOpts = null;
     this.busy = false;
     audio.play(this.room.music || this.room.theme);
+    audio.ambient(this.room.ambient || this.room.theme);
     this.refreshHud();
     if (!result) return;
     if (result.outcome === 'win') { o.onWin && o.onWin(); if (o.after) this.runScript(o.after); }

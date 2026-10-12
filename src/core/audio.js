@@ -101,11 +101,36 @@ class AudioEngine {
     (S[name] || S.move)();
   }
 
+  // ---- room tone: a quiet continuous bed per sector, under the music ----
+  ambient(kind) {
+    if (this.ambKind === kind) return;
+    if (this.amb) { const a = this.amb; try { a.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2); setTimeout(() => a.nodes.forEach(n => { try { n.stop(); } catch (e) { /* already stopped */ } }), 800); } catch (e) { /* ignore */ } clearInterval(a.timer); }
+    this.amb = null; this.ambKind = kind;
+    if (!kind || !this.ctx) return;
+    const P = AMBIENT[kind]; if (!P) return;
+    const ctx = this.ctx, gain = ctx.createGain(), nodes = [];
+    gain.gain.value = 0; gain.connect(this.sfxGain);
+    gain.gain.setTargetAtTime(P.vol, ctx.currentTime, 0.6);
+    if (P.noise) {
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = P.noise.type || 'lowpass'; f.frequency.value = P.noise.freq; f.Q.value = P.noise.q || 0.7;
+      src.connect(f); f.connect(gain); src.start(); nodes.push(src);
+    }
+    for (const [freq, v, type] of P.tones || []) {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type || 'sine'; o.frequency.value = freq; g.gain.value = v;
+      o.connect(g); g.connect(gain); o.start(); nodes.push(o);
+    }
+    const timer = P.tick ? setInterval(() => P.tick(this), P.every) : null;
+    this.amb = { gain, nodes, timer };
+  }
+
   // ---- music ----
-  play(name) {
-    if (this.songName === name) return;
+  // transpose: semitones (battle music shifts key per sector). Intensity layers are set separately.
+  play(name, { transpose = 0 } = {}) {
+    const key = name + ':' + transpose;
+    if (this.songName === key) return;
     this.stop();
-    this.songName = name;
+    this.songName = key; this.transpose = transpose; this.intensity = 0;
     const song = SONGS[name];
     if (!song || !this.ctx) return;
     this.song = song; this.step = 0;
@@ -124,10 +149,18 @@ class AudioEngine {
       this.nextTime += stepDur * (s.swing && this.step % 2 ? 1 + s.swing : s.swing && this.step % 2 === 0 ? 1 - s.swing : 1);
     }
   }
+  // 0 calm, 1 tense (boss phase / low foe HP), 2 danger (Jules low): adds percussion and doubles.
+  setIntensity(n) { this.intensity = n; }
   playStep(s, step, at, sd) {
     const out = this.musicGain;
     const bar = Math.floor(step / 16) % s.chords.length;
-    const ch = parseChord(s.chords[bar]);
+    const ch0 = parseChord(s.chords[bar]);
+    const ch = { root: ch0.root + (this.transpose || 0), tones: ch0.tones };
+    const lvl = this.intensity || 0;
+    if (lvl >= 1 && s.drums && step % 2 === 1) this.noise(0.025, { vol: 0.05, filter: 9000, at, out });
+    if (lvl >= 1 && s.bass && step % 4 === 0) this.tone(mtof(12 * ((s.bassOct || 3) + 1) + ch.root), sd * 1.5, { type: 'square', vol: 0.05, at, out });
+    if (lvl >= 2 && step % 4 === 0) this.tone(150, 0.1, { type: 'sine', vol: 0.4, slide: -110, at, out });
+    if (lvl >= 2 && step % 8 === 4) this.tone(mtof(12 * 6 + ch.root + ch.tones[(step >> 3) % 3]), sd * 2, { type: 'square', vol: 0.045, at, out });
     const i = step % 16;
     const tok = (pat) => { const a = pat.split(' '); return a[step % a.length]; };
     if (s.arp) {
@@ -159,7 +192,7 @@ class AudioEngine {
         const m = /^([A-G][#b]?)(\d)$/.exec(t);
         if (m) {
           let len = 1; while (toks[(step + len) % toks.length] === '-') len++;
-          this.tone(mtof(12 * (+m[2] + 1) + NOTE[m[1]]), sd * len * 0.95, { type: s.leadWave || 'square', vol: s.leadVol || 0.1, at, out });
+          this.tone(mtof(12 * (+m[2] + 1) + NOTE[m[1]] + (this.transpose || 0)), sd * len * 0.95, { type: s.leadWave || 'square', vol: s.leadVol || 0.1, at, out });
         }
       }
     }
@@ -181,6 +214,17 @@ export const SONGS = {
   outlet:  { bpm: 60, chords: ['Cmaj7', 'Am7', 'Fmaj7', 'G'], arp: '0 2 3 4 3 2', arpWave: 'triangle', arpVol: 0.1, arpLen: 2.5, pad: true, padWave: 'sine' },
   ending:  { bpm: 76, chords: ['C', 'G', 'Am', 'F', 'C', 'G', 'F', 'F'], arp: '0 2 4 2 1 2 4 2', arpWave: 'triangle', arpVol: 0.1, pad: true, bass: '0 . . . 5 . . . o . . . 5 . . .', lead: 'E5 - - - D5 - C5 - D5 - - - G4 - - - C5 - - - D5 - E5 - F5 - - - E5 - D5 - E5 - - - D5 - C5 - D5 - - - G5 - - - A5 - - - G5 - E5 - C5 - - - - - - -' },
   void:    { bpm: 50, chords: ['Cdim', 'Ebdim'], arp: '0 . . 3 . . 1 . . . 2 . . . . .', arpWave: 'sine', arpVol: 0.12, arpLen: 6, pad: true, padWave: 'sine', padVol: 0.04 },
+};
+
+// Room tone per sector theme. vol is relative to the SFX volume.
+const AMBIENT = {
+  lobby: { vol: 0.05, noise: { freq: 320 }, tones: [[60, 0.15]] },
+  labs: { vol: 0.04, noise: { freq: 2400, type: 'bandpass', q: 0.4 }, tones: [[120, 0.08, 'sawtooth']] },
+  servers: { vol: 0.09, noise: { freq: 900 }, tones: [[110, 0.05], [220, 0.02]] },
+  archive: { vol: 0.035, noise: { freq: 220 }, every: 1000, tick: (a) => a.tone(2400, 0.015, { type: 'square', vol: 0.03, out: a.amb && a.amb.gain }) },
+  tunnels: { vol: 0.05, noise: { freq: 3000, type: 'bandpass', q: 0.6 }, every: 2300, tick: (a) => Math.random() < 0.6 && a.tone(1800 + Math.random() * 900, 0.06, { type: 'sine', vol: 0.12, slide: -900, out: a.amb && a.amb.gain }) },
+  core: { vol: 0.07, tones: [[55, 0.35], [82.4, 0.2], [110.5, 0.08, 'triangle']] },
+  void: { vol: 0.03, tones: [[1180, 0.05], [1187, 0.05]] },
 };
 
 export const audio = new AudioEngine();
