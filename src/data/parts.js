@@ -93,6 +93,8 @@ export const PARTS = Object.fromEntries([
   P('usb_ti84', 'usb', "Kev's TI-84", 2, { crit: 6, spd: 2 }, { desc: 'PROPERTY OF KEV. The programs include a dating sim and a perfect physics solver.' }),
   P('usb_dex', 'usb', "Dex's Lucky Controller", 4, { spd: 8, crit: 6, atk: 3 }, { desc: 'Sticky. Lucky. Mailed with a note: "for the lore nerd".' }),
   P('gpu_priya', 'gpu', "Priya's Thesis Accelerator", 3, { atk: 22, pwr: 4, crit: 3 }, { form: 'batch', desc: 'Five years of grad school in one card. Hits everything, like a deadline.' }),
+  P('usb_benchy', 'usb', 'Benchy Flotilla', 3, { spd: 4 }, { drone: 'boat', desc: 'Five escaped calibration boats. They sail out at battle start and ram things, very politely.' }),
+  P('usb_phones', 'usb', 'Noise-Cancelling Headphones', 3, { def: 3, hp: 15 }, { passive: 'calm', desc: 'Dex\'s. Blocks the hum, and every Lag effect with it.' }),
   P('usb_ventner', 'usb', "Ventner's Thumb Drive", 4, { atk: 4, spd: 4, def: 4 }, { passive: 'ventner', desc: 'Labelled "H.V. — DO NOT RUN". Revives you once per battle at 30%.' }),
 ].map(p => [p.id, p]));
 

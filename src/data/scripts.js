@@ -92,6 +92,41 @@ S.lore_reward = (n) => ({
   20: [{ who: 'dex', text: '20 NOTES. the ventner stuff is so sad?? ok sending u my good USB hub. dont ask where i got it' }, { give: { part: 'usb_hub' } }, { give: { mat: 'silicon', n: 2 } }],
   30: [{ who: 'dex', text: '30. thats basically everything. ur a legend. sending my lucky controller. it has carried me thru 4 finals' }, { give: { part: 'usb_dex' } }],
 }[n]);
+// ---- Side quests that send you back through the building ----
+export const BOATS = ['b_commons', 'b_mail', 'b_eelab', 'b_lecture', 'b_srv'];
+export const sleepersHeard = (s) => Object.keys(s.flags).filter(k => k.startsWith('heard_')).length;
+export const SLEEPERS_TOTAL = 14;
+S.benchy_found = (s) => {
+  const n = BOATS.filter(b => s.flags['boat_' + b]).length;
+  const out = [{ who: 'sys', text: `A tiny printed boat, perfect down to the porthole. Stamped on the hull: "M." (${n}/${BOATS.length} boats)` }];
+  if (n === 1) out.push(
+    { who: 'dex', text: 'wait. the maker space printers made like 10000 of those. MINIMA called them "perfect" bc a boat has no loss' },
+    { who: 'dex', text: 'a few must have escaped before it noticed. collect them?? theyre evidence. also theyre cute' },
+    { who: 'sys', text: 'New quest: Benchy Census. Escaped boats hide in spots you could not reach before. Your newer tools will get you there.' },
+  );
+  if (n === BOATS.length && !s.flags.benchy_done) out.push(
+    { who: 'jules', text: 'Five boats. A whole fleet.' },
+    { who: 'sys', text: 'The boats hum in your bag. Then, very politely, they line up on your Build like they want to help.' },
+    { give: { part: 'usb_benchy' } }, { set: 'benchy_done' },
+  );
+  return out;
+};
+S.sleep_study = (s) => {
+  const n = sleepersHeard(s);
+  if (n === 1) return [
+    { who: 'dex', text: 'ur talking to them?? they talk back??' },
+    { who: 'dex', text: 'ok science time. write down what every sleeper says. if MINIMA thinks theyre "loss" maybe what theyre dreaming tells us what it actually wants' },
+    { who: 'sys', text: `New quest: Sleep Study. Listen to every sleeping student in Hollis Hall. (1/${SLEEPERS_TOTAL})` },
+  ];
+  if (n >= SLEEPERS_TOTAL && !s.flags.sleep_done) return [
+    { who: 'sys', text: `Sleep Study complete (${n}/${SLEEPERS_TOTAL}).` },
+    { who: 'dex', text: 'ok i read all of it. grades, deadlines, "hold still", "loss going down". its not hurting them. its telling them they can stop' },
+    { who: 'dex', text: 'thats worse?? thats so much worse. anyway here. noise cancelling headphones. so u dont have to hear it when u go down there' },
+    { give: { part: 'usb_phones' } }, { set: 'sleep_done' },
+  ];
+  return [{ who: 'sys', text: `(Sleep Study: ${n}/${SLEEPERS_TOTAL} sleepers heard.)` }];
+};
+
 S.sleep_c = [{ who: 'student', name: 'Sleeping student (Ines)', text: '...sudo make me a sandwich... okay... ' }];
 S.sleep_d = [{ who: 'student', name: 'Sleeping student (Tomás)', text: '...it says if we hold very still... we all get an A...' }];
 S.sleep_e = [{ who: 'student', name: 'Sleeping student (Bea)', text: '...the loss... is going down... isn\'t that good... Jules...?' }];
@@ -135,7 +170,14 @@ S.okafor = (s) => {
     { call: () => { s.quests.soup = 'active'; } },
     { who: 'sys', text: 'New quest: Pepper Soup.' },
   ];
-  return [{ who: 'okafor', text: lines[s.hour] || lines[2] }, { choice: [{ label: 'Shop', then: [shop] }, { label: 'Talk', then: [{ who: 'okafor', text: S.okaforTalk(s) }] }, { label: 'Bye', then: [] }] }];
+  const shiftOpt = s.bosses.vendor ? [{ label: 'Night Shift', then: [{ call: (sc, done) => { sc.shiftMenu(done); } }] }] : [];
+  const intro = s.bosses.vendor && !s.flags.shift_seen ? [
+    { set: 'shift_seen' },
+    { who: 'okafor', text: 'Before you go. I keep a clipboard of where those things nest. Forty years of night shifts, I know every corner that goes bad.' },
+    { who: 'okafor', text: 'If you want to clear a few nests for me, I pay in Silicon. The good stuff. Every shift goes wrong a different way, so keep your head.' },
+    { who: 'sys', text: 'Night Shift unlocked: optional three-wave fights at the Byte Cafe, with a new twist each run.' },
+  ] : [];
+  return [...intro, { who: 'okafor', text: lines[s.hour] || lines[2] }, { choice: [{ label: 'Shop', then: [shop] }, ...shiftOpt, { label: 'Talk', then: [{ who: 'okafor', text: S.okaforTalk(s) }] }, { label: 'Bye', then: [] }] }];
 };
 S.okaforTalk = (s) => [
   'I raised four kids on this shift. You are not the first student I have watched do something brilliant and stupid at the same time.',

@@ -3,7 +3,8 @@ import { Input } from '../core/input.js';
 import { audio } from '../core/audio.js';
 import { G, partOf, makePart, addItem, equippedUids } from '../core/state.js';
 import { text, panel, C, W, H, ListMenu, wrapText, toInt } from '../core/ui.js';
-import { PARTS, TIERS } from '../data/parts.js';
+import { PARTS, TIERS, PERKS } from '../data/parts.js';
+import { specials } from '../data/specials.js';
 import { APPS, ITEMS } from '../data/apps.js';
 
 // Stock unlocks by hour (state.hour).
@@ -49,12 +50,17 @@ export class Shop extends Phaser.Scene {
     const s = G.state;
     this.o(panel(this, 8, 54, 270, 208)); this.o(panel(this, 284, 54, 188, 208));
     const desc = this.o(text(this, 292, 62, '', C.text));
-    const rows = STOCK.filter(x => x.hour <= s.hour && !(x.app && s.apps.includes(x.app)) && !(x.part && s.flags['bought_' + x.part])).map(x => {
+    const spec = specials(s);
+    const specRows = spec.list.filter(x => !s.flags[x.key]).map(x => {
+      const b = PARTS[x.part];
+      return { label: '★ ' + b.name, right: '$' + x.price, price: x.price, x, color: toInt(TIERS[b.tier].color), desc: `NIGHT SPECIAL · ${b.slot.toUpperCase()} · ${TIERS[b.tier].name}\n${Object.entries(b.stats).map(([k, v]) => k.toUpperCase() + ' +' + v).join('  ')}\nPerks: ${x.perks.map(p => PERKS[p].name).join(', ')}\n\n"Came in on the night truck. Won't last." Restocks in ${spec.left} win${spec.left > 1 ? 's' : ''} or after a boss.` };
+    });
+    const rows = specRows.concat(STOCK.filter(x => x.hour <= s.hour && !(x.app && s.apps.includes(x.app)) && !(x.part && s.flags['bought_' + x.part])).map(x => {
       if (x.item) return { label: ITEMS[x.item].name, right: '$' + ITEMS[x.item].price, price: ITEMS[x.item].price, x, desc: ITEMS[x.item].desc + `\n\nOwned: ${s.items[x.item] || 0}` };
       if (x.app) return { label: 'App: ' + APPS[x.app].name, right: '$' + x.price, price: x.price, x, color: C.accent, desc: APPS[x.app].desc + `\n\nCost ${APPS[x.app].pwr} Power.` };
       const b = PARTS[x.part];
       return { label: b.name, right: '$' + x.price, price: x.price, x, color: toInt(TIERS[b.tier].color), desc: `${b.slot.toUpperCase()} · ${TIERS[b.tier].name}\n${Object.entries(b.stats).map(([k, v]) => k.toUpperCase() + ' +' + v).join('  ')}\n\n${b.desc}` };
-    });
+    }));
     rows.forEach(r => { r.disabled = s.flex < r.price; });
     this.list = new ListMenu(this, 16, 62, 254, rows, {
       rows: 16, lineH: 12, cursor,
@@ -63,7 +69,8 @@ export class Shop extends Phaser.Scene {
         s.flex -= it.price;
         if (it.x.item) addItem(s, it.x.item);
         if (it.x.app) s.apps.push(it.x.app);
-        if (it.x.part) { s.parts.push(makePart(it.x.part)); s.flags['bought_' + it.x.part] = true; }
+        if (it.x.special) { s.parts.push(makePart(it.x.part, { perks: it.x.perks })); s.flags[it.x.key] = true; }
+        else if (it.x.part) { s.parts.push(makePart(it.x.part)); s.flags['bought_' + it.x.part] = true; }
         audio.sfx('pickup'); this.openBuy(i);
       },
       onBack: () => this.openRoot(),

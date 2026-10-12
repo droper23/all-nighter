@@ -221,7 +221,10 @@ export class Battle {
   }
   addStatus(u, id, turns, extra = {}) {
     if (!u.alive) return null;
-    if (id === 'lag') { u.next += this.delayFor(u, 45 * turns); return { t: 'status', u, id: 'lag', text: 'Lagged!' }; }
+    if (id === 'lag') {
+      if (u.kind === 'player' && this.stats.passives.has('calm')) return { t: 'status', u, id: 'calm', text: 'Headphones: no Lag.' };
+      u.next += this.delayFor(u, 45 * turns); return { t: 'status', u, id: 'lag', text: 'Lagged!' };
+    }
     if (u.kind === 'player' && DEBUFFS.includes(id)) {
       if (!this.player.duckUsed) { this.player.duckUsed = true; return { t: 'status', u, id: 'duck', text: 'The Rubber Duck absorbs it.' }; }
       turns = Math.max(1, turns - (this.stats.perks.insulated || 0));

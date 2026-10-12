@@ -153,6 +153,7 @@ export const DRONES = {
   cam:    { name: 'Webcam Drone', sprite: 'drone_cam', hp: 0.25, atkMul: 0.4, spd: 110, act: 'probe' },
   turret: { name: 'Turret', sprite: 'drone_turret', hp: 0.35, atkMul: 0.6, spd: 92, act: 'shoot' },
   fork:   { name: 'Fork', sprite: 'drone_fork', hp: 0.05, atkMul: 0.6, spd: 140, act: 'shoot', life: 2 },
+  boat:   { name: 'Benchy Flotilla', sprite: 'benchy', hp: 0.15, atkMul: 0.45, spd: 120, act: 'shoot' },
 };
 
 // Loot tables per sector: parts that can drop from that sector's Glitches.

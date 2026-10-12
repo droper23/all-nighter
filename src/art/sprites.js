@@ -119,13 +119,15 @@ export function buildSprites(scene) {
   addTexture(scene, 'box', p, 16, 16);
 
   // Pickups: sticky note, flash drive, tool, keycard, heart (vital).
-  p = new Pix(16 * 6, 16);
+  p = new Pix(16 * 7, 16);
   p.rect(4, 4, 8, 8, '#ffe08a').rect(4, 4, 8, 2, '#d9a53a').hline(5, 8, 5, '#7a7890').hline(5, 10, 4, '#7a7890'); p.outline('#0d0b14', 0, 0, 16, 16);
   p.rect(16 + 5, 3, 6, 9, '#4a74d6').rect(16 + 6, 12, 4, 3, '#b8b6c8').px(16 + 7, 13, '#0d0b14').px(16 + 8, 13, '#0d0b14').px(16 + 7, 5, '#5ee0e8'); p.outline('#0d0b14', 16, 0, 16, 16);
   p.rect(32 + 3, 5, 10, 7, '#d9a53a').rect(32 + 4, 6, 8, 5, '#ffe08a').rect(32 + 7, 2, 2, 3, '#b8b6c8').rect(32 + 5, 12, 6, 2, '#7a4e32'); p.outline('#0d0b14', 32, 0, 16, 16);
   p.rect(48 + 3, 4, 10, 8, '#f2f0e6').rect(48 + 4, 5, 3, 3, '#4a74d6').hline(48 + 8, 6, 4, '#7a7890').hline(48 + 8, 8, 3, '#7a7890').hline(48 + 4, 10, 8, '#5cc070'); p.outline('#0d0b14', 48, 0, 16, 16);
   p.disc(64 + 8, 8, 4, '#e0485e').disc(64 + 7, 7, 1, '#ffe08a'); p.outline('#0d0b14', 64, 0, 16, 16);
   p.rect(80 + 4, 3, 8, 10, '#2e2c40').rect(80 + 5, 4, 6, 5, '#5ee0e8').rect(80 + 6, 10, 4, 2, '#e0485e'); p.outline('#0d0b14', 80, 0, 16, 16);
+  // tiny calibration boat (Benchy)
+  p.rect(96 + 3, 10, 10, 3, '#e0485e').rect(96 + 4, 13, 8, 1, '#9e2a3c').rect(96 + 6, 6, 4, 4, '#e0485e').rect(96 + 7, 7, 2, 2, '#0d0b14').rect(96 + 9, 3, 1, 3, '#e0485e').px(96 + 12, 9, '#e0485e'); p.outline('#0d0b14', 96, 0, 16, 16);
   addTexture(scene, 'pickups', p, 16, 16);
 
   // Doors (keycard colors), each closed 16x16.

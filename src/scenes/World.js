@@ -10,6 +10,8 @@ import { SCRIPTS } from '../data/scripts.js';
 import { PARTS } from '../data/parts.js';
 import { APPS, ITEMS } from '../data/apps.js';
 import { NOTES } from '../data/notes.js';
+import { openShifts, twistFor } from '../data/shifts.js';
+import { LOOT } from '../data/enemies.js';
 
 const MARKERS = /[0-9ACDEGHIJKNQRUZ@]/;
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -110,6 +112,7 @@ export class World extends Phaser.Scene {
       }
       case 'note': if (s.notes.includes(def.id)) return; add('pickups', NOTES[def.id] && NOTES[def.id].kind === 'drive' ? 1 : 0); this.bob(e.sprite); break;
       case 'read': break;
+      case 'boat': if (s.flags['boat_' + def.id]) return; add('pickups', 6); this.bob(e.sprite); break;
       case 'box': { const opened = s.opened[id]; add('box', opened ? 1 : 0); e.solid = true; break; }
       case 'outlet': add('outlet').play('outlet_glow'); e.solid = true; break;
       case 'tool': if (s.tools.includes(def.tool) || (def.flag && s.flags[def.flag])) return; add('pickups', 2); this.bob(e.sprite); break;
@@ -350,12 +353,14 @@ export class World extends Phaser.Scene {
     switch (ent.type) {
       case 'npc': case 'sleeper': case 'read': case 'terminal': {
         if (ent.sprite && ent.type !== 'terminal' && ent.type !== 'read') this.faceToward(ent);
+        if (ent.type === 'sleeper' && !s.flags['heard_' + ent.id]) { s.flags['heard_' + ent.id] = true; const sc = SCRIPTS[d.script]; const lines = typeof sc === 'function' ? sc(s) : sc || []; return this.runScript([...lines, ...SCRIPTS.sleep_study(s)]); }
         const sc = SCRIPTS[d.script];
         if (sc) return this.runScript(typeof sc === 'function' ? sc(s) : sc);
         if (d.text) return this.runScript([{ who: d.who || 'sys', name: d.name, text: d.text }]);
         return;
       }
       case 'note': return this.collectNote(ent);
+      case 'boat': return this.collectBoat(ent);
       case 'box': return this.openBox(ent);
       case 'outlet': return this.useOutlet(ent);
       case 'tool': return this.pickTool(ent);
@@ -439,7 +444,7 @@ export class World extends Phaser.Scene {
     this.time.delayedCall(340, () => {
       cam.setZoom(1);
       this.scene.sleep();
-      this.scene.run('Battle', { group, preempt: opts.preempt, boss: opts.boss, music: opts.music, bg: this.room.theme, canFlee: opts.canFlee !== false && !opts.boss });
+      this.scene.run('Battle', { group, preempt: opts.preempt, boss: opts.boss, music: opts.music, bg: opts.bg || this.room.theme, canFlee: opts.canFlee !== false && !opts.boss, mods: opts.mods });
     });
   }
   onWake(result) {
@@ -452,7 +457,7 @@ export class World extends Phaser.Scene {
     if (!result) return;
     if (result.outcome === 'win') { o.onWin && o.onWin(); if (o.after) this.runScript(o.after); }
     else if (result.outcome === 'fled') { o.onFlee && o.onFlee(); }
-    else if (result.outcome === 'lose') this.respawn();
+    else if (result.outcome === 'lose') { if (o.onLose) o.onLose(); else this.respawn(); }
   }
   respawn() {
     const s = G.state;
@@ -508,6 +513,14 @@ export class World extends Phaser.Scene {
     const reward = [10, 20, 30].find(t => s.notes.length >= t && !s.flags['lore' + t]);
     if (reward) s.flags['lore' + reward] = true;
     this.runScript([{ who: 'sys', name: `${label}: ${n.title}`, text: n.text }, { who: 'sys', text: `(Saved to Notes. ${s.notes.length} found.)` }, ...(reward ? SCRIPTS.lore_reward(reward) : [])]);
+  }
+  collectBoat(ent) {
+    const s = G.state;
+    s.flags['boat_' + ent.def.id] = true;
+    audio.sfx('pickup');
+    ent.sprite && ent.sprite.destroy();
+    this.ents = this.ents.filter(x => x !== ent);
+    this.runScript(SCRIPTS.benchy_found(s));
   }
   openBox(ent) {
     const s = G.state;
@@ -665,6 +678,51 @@ export class World extends Phaser.Scene {
     audio.stop();
     this.cameras.main.fadeOut(1500, 255, 255, 255);
     this.cameras.main.once('camerafadeoutcomplete', () => { this.scene.stop(); this.scene.start('Ending', { kind }); });
+  }
+
+  // ---------------- Night Shift ----------------
+  shiftMenu(done) {
+    const s = G.state, list = openShifts(s);
+    const opts = list.map((sh, i) => {
+      const tw = twistFor(s, i), n = (s.shifts || {})[sh.id] || 0;
+      return { label: `${sh.name}${n ? ' (' + n + ')' : ''}: ${tw.name}`, then: [
+        { who: 'okafor', name: `${sh.name.toUpperCase()} · ${tw.name.toUpperCase()}`, text: `${tw.desc} Three waves, no running. Pay: $${Math.round(sh.flex * tw.bonus)}, Scrap and ${sh.silicon} Silicon.${n ? '' : ' First clear: a part from my good drawer.'}` },
+        { choice: [{ label: 'Clock in', then: [{ call: (sc, d2) => { d2(); sc.startShift(sh, tw); } }] }, { label: 'Not now', then: [] }] },
+      ] };
+    });
+    this.dialogue.queue.unshift({ choice: [...opts, { label: 'Never mind', then: [] }], prompt: 'Okafor\'s clipboard. Each nest goes wrong a different way tonight.' });
+    done();
+  }
+  startShift(sh, tw) {
+    const s = G.state, run = { wave: 0 };
+    s.shiftRuns = (s.shiftRuns || 0) + 1;
+    const next = () => {
+      const group = sh.waves[run.wave++], last = run.wave >= sh.waves.length;
+      this.startBattle(group, {
+        mods: tw.mods, canFlee: false, bg: sh.sector,
+        after: last ? [{ call: (sc, d) => { d(); sc.finishShift(sh, tw); } }]
+          : [{ who: 'sys', text: `Wave ${run.wave}/${sh.waves.length} clear (${tw.name}). You catch your breath: +25% HP.` }, { call: (sc, d) => { const st = computeStats(s); s.hp = Math.min(st.maxHp, s.hp + Math.round(st.maxHp * 0.25)); sc.refreshHud(); d(); next(); } }],
+        onLose: () => { s.hp = Math.round(computeStats(s).maxHp * 0.5); this.refreshHud(); this.runScript([{ who: 'okafor', text: 'Clock out, baby. That nest will still be there. Nothing lost but pride.' }]); },
+      });
+    };
+    next();
+  }
+  finishShift(sh, tw) {
+    const s = G.state;
+    s.shifts = s.shifts || {};
+    const first = !s.shifts[sh.id];
+    s.shifts[sh.id] = (s.shifts[sh.id] || 0) + 1;
+    const flex = Math.round(sh.flex * tw.bonus), scrap = Math.round(sh.scrap * tw.bonus);
+    s.flex += flex; s.mats.scrap += scrap; s.mats.silicon += sh.silicon;
+    const steps = [{ who: 'okafor', text: `Shift done. $${flex}, ${scrap} Scrap and ${sh.silicon} Silicon. You work like my late husband, and I mean that kindly.` }];
+    if (first) {
+      const pool = LOOT[sh.sector].parts.slice().sort((a, b) => PARTS[b].tier - PARTS[a].tier).slice(0, 4);
+      const id = pool[Math.floor(Math.random() * pool.length)];
+      steps.push({ who: 'okafor', text: 'First time on this one. Take something from my good drawer.' }, { give: { part: id } });
+    }
+    audio.sfx('levelup');
+    this.refreshHud();
+    this.runScript(steps);
   }
 
   openMenu(tab) {

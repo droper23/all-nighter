@@ -6,6 +6,7 @@ import { isSolid } from '../src/art/tiles.js';
 
 const MARK = /[0-9ACDEGHIJKNQRUZ@]/;
 const BLOCKING = new Set(['npc', 'sleeper', 'box', 'outlet', 'boss', 'shop', 'bench', 'valve', 'terminal']);
+// 'boat' pickups are walk-over collectibles like notes.
 
 function walkable(ch, kit) {
   if (ch === '^') return kit.tools.has('iron');
@@ -54,12 +55,12 @@ function explore(kit) {
 }
 
 const STAGES = [
-  { tools: [], keys: ['student'], flags: [], need: ['alcove:1'], not: ['labs_hall:1', 'closet:1'] },
-  { tools: ['multimeter'], keys: ['student', 'ta'], flags: [], need: ['grading:1', 'closet:1', 'ta_office:1'], not: ['srv_hall:1'] },
-  { tools: ['multimeter', 'iron'], keys: ['student', 'ta'], flags: [], need: ['raid_vault:1'], not: ['arc_stairs:1'] },
-  { tools: ['multimeter', 'iron', 'truck'], keys: ['student', 'ta', 'staff'], flags: [], need: ['thesis_room:1', 'security:2'], not: ['tun_entry:1'] },
-  { tools: ['multimeter', 'iron', 'truck', 'wrench'], keys: ['student', 'ta', 'staff'], flags: [], need: ['router_core:1', 'facilities:1', 'tun_dark:3'], not: ['b_stairs:1', 'prof_office:1'] },
-  { tools: ['multimeter', 'iron', 'truck', 'wrench'], keys: ['student', 'ta', 'staff', 'faculty'], flags: ['lockouts_done'], need: ['hollis_core:1', 'ventner_office:2', 'prof_office:1'] },
+  { tools: [], keys: ['student'], flags: [], need: ['alcove:1', 'commons:5', 'mailroom:3'], not: ['labs_hall:1', 'closet:1', 'mailroom:7', 'commons:7'] },
+  { tools: ['multimeter'], keys: ['student', 'ta'], flags: [], need: ['grading:1', 'closet:1', 'ta_office:1'], not: ['srv_hall:1', 'mailroom:7', 'commons:7', 'ee_lab:7', 'lecture:7'] },
+  { tools: ['multimeter', 'iron'], keys: ['student', 'ta'], flags: [], need: ['raid_vault:1', 'mailroom:7'], not: ['arc_stairs:1', 'commons:7', 'srv_hall:7'] },
+  { tools: ['multimeter', 'iron', 'truck'], keys: ['student', 'ta', 'staff'], flags: [], need: ['thesis_room:1', 'security:2', 'commons:7'], not: ['tun_entry:1', 'ee_lab:7', 'srv_hall:7'] },
+  { tools: ['multimeter', 'iron', 'truck', 'wrench'], keys: ['student', 'ta', 'staff'], flags: [], need: ['router_core:1', 'facilities:1', 'tun_dark:3', 'ee_lab:7', 'srv_hall:7'], not: ['b_stairs:1', 'prof_office:1', 'lecture:7'] },
+  { tools: ['multimeter', 'iron', 'truck', 'wrench'], keys: ['student', 'ta', 'staff', 'faculty'], flags: ['lockouts_done'], need: ['hollis_core:1', 'ventner_office:2', 'prof_office:1', 'lecture:7'] },
   { tools: ['multimeter', 'iron', 'truck', 'wrench'], keys: ['student', 'ta', 'staff', 'faculty'], flags: ['lockouts_done', 'postgame'], need: ['r404_core:1'] },
 ];
 
@@ -76,7 +77,7 @@ test('every box, note and boss is reachable with the full kit', () => {
   const reached = explore({ tools: new Set(last.tools), keys: new Set(last.keys), flags: new Set(last.flags) });
   const missing = [];
   for (const [id, r] of Object.entries(ROOMS)) for (const [m, e] of Object.entries(r.ents || {})) {
-    if (['box', 'note', 'boss', 'tool', 'shop', 'bench', 'outlet', 'terminal'].includes(e.type) && !reached.has(`${id}:${m}`)) missing.push(`${id}:${m} (${e.type})`);
+    if (['box', 'note', 'boss', 'tool', 'shop', 'bench', 'outlet', 'terminal', 'boat', 'valve', 'sleeper'].includes(e.type) && !reached.has(`${id}:${m}`)) missing.push(`${id}:${m} (${e.type})`);
   }
   if (missing.length) console.log('unreachable:', missing.join(', '));
   assert.equal(missing.length, 0);

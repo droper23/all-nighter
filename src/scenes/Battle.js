@@ -83,8 +83,13 @@ export class Battle extends Phaser.Scene {
         this.sprites.set(u.id, sp);
         sp.home = pos;
         sp.shadow = this.add.ellipse(pos.x, pos.y, sp.displayWidth * 0.8, 6, 0x000000, 0.4).setDepth(90);
-        this.tweens.add({ targets: sp, y: pos.y - 2, yoyo: true, repeat: -1, duration: 700 + Math.random() * 400, ease: 'sine.inOut' });
+        sp.bob = this.tweens.add({ targets: sp, y: pos.y - 2, yoyo: true, repeat: -1, duration: 700 + Math.random() * 400, ease: 'sine.inOut' });
         if (!initial) { sp.setAlpha(0); this.tweens.add({ targets: sp, alpha: 1, duration: 300 }); }
+      } else if (sp.home.y !== pos.y) {
+        // moved to a new slot (e.g. a neighbour died): re-seat the idle bob on the new baseline
+        if (sp.bob) sp.bob.remove();
+        sp.y = pos.y;
+        sp.bob = this.tweens.add({ targets: sp, y: pos.y - 2, yoyo: true, repeat: -1, duration: 700 + Math.random() * 400, ease: 'sine.inOut' });
       }
       sp.home = pos; sp.x = pos.x; sp.shadow.x = pos.x; sp.shadow.y = pos.y;
       return sp;
@@ -220,7 +225,7 @@ export class Battle extends Phaser.Scene {
   // Freeze motion for a beat so hits land.
   hitStop(ms) {
     this.tweens.pauseAll();
-    setTimeout(() => { if (this.sys && this.sys.isActive()) this.tweens.resumeAll(); }, ms);
+    this.time.delayedCall(ms, () => this.tweens.resumeAll());
   }
   // One-time contextual tips for new players.
   tip(id, str) {

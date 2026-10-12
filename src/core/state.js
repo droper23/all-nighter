@@ -23,13 +23,14 @@ export function makePart(id, { plus = 0, perks = null } = {}) {
 
 export function newGame(difficulty = 'standard') {
   const s = {
-    version: 1, difficulty, playtime: 0, created: Date.now(),
+    version: SAVE_VERSION, difficulty, playtime: 0, created: Date.now(),
     room: 'studio', x: null, y: null, facing: 'down',
     level: 1, xp: 0, hp: 50, flex: 20,
     parts: [], apps: ['patch', 'probe'], items: { ramen: 3, volt: 1 }, mats: { scrap: 0, silicon: 0 },
     build: { cpu: null, gpu: null, ram: [null, null], ramApps: ['patch', 'probe'], psu: null, cool: null, usb: [null, null] },
     tools: [], keys: ['student'], flags: {}, opened: {}, notes: [], cleared: {}, bosses: {}, visited: {}, outlets: [],
     quests: {}, hour: 2, lastOutlet: null, stats: { battles: 0, wins: 0, steps: 0 },
+    probed: {}, shifts: {}, shiftRuns: 0,
   };
   const give = (id, slot, idx) => { const p = makePart(id); s.parts.push(p); if (idx == null) s.build[slot] = p.uid; else s.build[slot][idx] = p.uid; };
   give('cpu_celery', 'cpu'); give('gpu_igpu', 'gpu'); give('ram_2gb', 'ram', 0); give('ram_2gb', 'ram', 1);
@@ -109,7 +110,17 @@ export function saveGame(s, slot) {
   try { localStorage.setItem(KEY(slot), JSON.stringify(s)); return true; } catch (e) { return false; }
 }
 export function loadGame(slot) {
-  try { const raw = localStorage.getItem(KEY(slot)); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  try { const raw = localStorage.getItem(KEY(slot)); return raw ? migrate(JSON.parse(raw)) : null; } catch (e) { return null; }
+}
+// Bring older saves up to the current shape. v1 -> v2: probe memory, Night Shift records.
+export const SAVE_VERSION = 2;
+export function migrate(s) {
+  if (!s || typeof s !== 'object') return s;
+  s.probed = s.probed || {}; s.shifts = s.shifts || {}; s.shiftRuns = s.shiftRuns || 0;
+  s.flags = s.flags || {}; s.stats = s.stats || { battles: 0, wins: 0, steps: 0 };
+  if (s.room === 'dorm_desk') { s.room = 'studio'; s.x = null; s.y = null; }
+  s.version = SAVE_VERSION;
+  return s;
 }
 export function deleteGame(slot) { try { localStorage.removeItem(KEY(slot)); } catch (e) { /* ignore */ } }
 export function listSaves() { return [1, 2, 3].map(slot => ({ slot, data: loadGame(slot) })); }
