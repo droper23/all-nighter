@@ -76,6 +76,8 @@ class AudioEngine {
       hit: () => { this.noise(0.12, { vol: 0.35, filter: 2500 }); this.tone(200, 0.1, { vol: 0.2, slide: -120 }); },
       crit: () => { this.noise(0.2, { vol: 0.45, filter: 5000 }); this.tone(900, 0.15, { vol: 0.2, slide: -600 }); this.tone(1200, 0.1, { vol: 0.15, at: 0.05 }); },
       zap: () => { this.tone(1400, 0.12, { type: 'sawtooth', vol: 0.12, slide: -1100 }); },
+      burst: () => { for (let i = 0; i < 4; i++) this.tone(1100 - i * 90, 0.05, { type: 'sawtooth', vol: 0.08, slide: -500, at: i * 0.05 }); },
+      wave: () => { this.tone(220, 0.35, { type: 'triangle', vol: 0.2, slide: 600 }); this.noise(0.3, { vol: 0.1, filter: 2000, sweep: 3000 }); },
       laser: () => { this.tone(2000, 0.3, { type: 'square', vol: 0.12, slide: -1700 }); this.noise(0.3, { vol: 0.1, filter: 6000, sweep: -5000 }); },
       heal: () => [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.12, { type: 'triangle', vol: 0.2, at: i * 0.06 })),
       shield: () => { this.tone(300, 0.25, { type: 'triangle', vol: 0.25, slide: 400 }); this.tone(600, 0.2, { type: 'sine', vol: 0.12, at: 0.1 }); },

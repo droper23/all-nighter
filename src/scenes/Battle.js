@@ -1,5 +1,5 @@
 // Turn-based battle presentation. Logic lives in battle/engine.js; this scene animates its events.
-import { Battle as Engine, STATUS_INFO, DEBUFFS } from '../battle/engine.js';
+import { Battle as Engine, STATUS_INFO, DEBUFFS, HOT_AT, actionName } from '../battle/engine.js';
 import { Input } from '../core/input.js';
 import { audio } from '../core/audio.js';
 import { G, computeStats, gainXp, DIFFICULTY, makePart, addItem } from '../core/state.js';
@@ -10,6 +10,7 @@ import { FORMS, PARTS } from '../data/parts.js';
 import { LOOT } from '../data/enemies.js';
 
 const INTENT_ICON = { atk: '►', multi: '»', aoe: '✶', drain: '►', debuff: '▼', buff: '▲', shield: '■', heal: '+', summon: '@', charge: '!', special: '?' };
+const FORM_COL = { raster: 0x5ee0e8, scatter: 0xffe08a, stream: 0xf08a3c, raytrace: 0xffffff, batch: 0xb57aff };
 const INTENT_COL = { atk: C.bad, multi: C.bad, aoe: C.bad, drain: C.warn, debuff: C.purple, buff: C.gold, shield: 0x8fb0ff, heal: C.good, summon: C.warn, charge: C.bad, special: C.text };
 
 export class Battle extends Phaser.Scene {
@@ -116,15 +117,15 @@ export class Battle extends Phaser.Scene {
     if (p.shield) bar(g, 12, 224, 120, 1, Math.min(1, p.shield / p.maxHp), 0x8fb0ff, 0x8fb0ff);
     this.pPwr.setText(`PWR ${p.pwr}/${p.maxPwr}`);
     bar(g, 12, 240, 120, 3, p.maxPwr ? p.pwr / p.maxPwr : 0, 0xffe08a);
-    const hf = p.heat / p.heatCap;
-    this.pHeat.setText(`HEAT ${Math.round(p.heat)}/${p.heatCap}${p.stunned ? ' OVERHEATED' : ''}`);
-    bar(g, 12, 256, 120, 4, hf, hf > 0.75 ? C.bad : hf > 0.5 ? C.warn : C.accent);
-    this.pHeat.setTint(hf > 0.75 ? C.bad : C.text);
-    // statuses
-    const sts = Object.keys(p.statuses).map(k => (STATUS_INFO[k] || { short: k }).short);
-    this.pStat.setText(wrapText(sts.join(' '), 84).join('\n'));
+    const hf = p.heat / p.heatCap, hot = hf >= HOT_AT;
+    this.pHeat.setText(`HEAT ${Math.round(p.heat)}/${p.heatCap}${p.stunned ? ' OVERHEATED' : hot ? '  HOT +15%' : ''}`);
+    bar(g, 12, 256, 120, 4, hf, hf > 0.8 ? C.bad : hot ? C.warn : C.accent);
+    g.fillStyle(0xffffff, 0.6).fillRect(12 + Math.round(120 * HOT_AT), 254, 1, 8);
+    this.pHeat.setTint(hf > 0.8 ? C.bad : hot ? C.warn : C.text);
     // enemy overhead UI
     this.ui.forEach(o => o.destroy()); this.ui = [];
+    this.chips(g, 104, 202, p, 84);
+    const crowd = this.eng.enemies.length >= 3;
     for (const u of this.eng.units) {
       if (!u.alive) continue;
       const sp = this.sprites.get(u.id); if (!sp) continue;
@@ -133,58 +134,162 @@ export class Battle extends Phaser.Scene {
         const w = Math.max(26, Math.min(48, sp.displayWidth));
         bar(g, sp.home.x - w / 2, sp.home.y + 4, w, 2, u.hp / u.maxHp, u.side === 'enemy' ? C.bad : C.good);
         if (u.shield) bar(g, sp.home.x - w / 2, sp.home.y + 7, w, 1, Math.min(1, u.shield / u.maxHp), 0x8fb0ff);
-        const st = Object.keys(u.statuses).filter(k => k !== 'guarding').map(k => STATUS_INFO[k] ? STATUS_INFO[k].short : k).join(' ');
-        if (st) this.ui.push(text(this, sp.home.x - st.length * 3, sp.home.y + 10, st, C.purple).setDepth(510));
+        this.chips(g, sp.home.x, sp.home.y + 10, u, 80, true);
       }
-      if (u.side === 'enemy' && u.intent) {
-        const m = u.intent.move, lbl = this.eng.intentLabel(u);
-        const str = `${INTENT_ICON[m.kind] || '?'}${lbl ? ' ' + lbl : ''}`;
-        const t = shadowText(this, sp.home.x - str.length * 3, Math.max(40, top - 8), str, INTENT_COL[m.kind] || C.text).setDepth(510);
-        this.ui.push(t.shadow, t);
-      }
+      if (u.side === 'enemy' && u.intent) this.drawIntent(g, u, sp.home.x, Math.max(44, top - 8), crowd);
     }
     this.drawTimeline();
   }
+  // Status chips: colored tag + turns left.
+  chips(g, x, y, u, maxW, centered = false) {
+    const list = Object.entries(u.statuses).filter(([k]) => k !== 'guarding' || u.kind === 'player').map(([k, v]) => {
+      const info = STATUS_INFO[k] || { short: k.slice(0, 3).toUpperCase(), color: '#f2f0e6' };
+      const n = v.turns >= 99 ? '' : String(v.turns);
+      return { str: info.short + n, col: toInt(info.color) };
+    });
+    if (!list.length) return;
+    const widths = list.map(c => c.str.length * 6 + 3);
+    const rows = []; let row = [], rw = 0;
+    list.forEach((c, i) => { if (rw + widths[i] > maxW && row.length) { rows.push([row, rw]); row = []; rw = 0; } row.push([c, widths[i]]); rw += widths[i] + 2; });
+    rows.push([row, rw]);
+    rows.forEach(([r, total], ri) => {
+      let cx = centered ? x - total / 2 : x;
+      for (const [c, cw] of r) {
+        const cy = y + ri * 10;
+        g.fillStyle(0x000000, 0.75).fillRect(cx, cy, cw, 9);
+        g.fillStyle(c.col, 1).fillRect(cx, cy, 1, 9);
+        this.ui.push(text(this, cx + 2, cy + 1, c.str, c.col).setDepth(511));
+        cx += cw + 2;
+      }
+    });
+  }
+  // Intent badge: icon, move name and estimated damage. "!" charges blink.
+  drawIntent(g, u, x, y, compact) {
+    const m = u.intent.move, lbl = this.eng.intentLabel(u);
+    const col = INTENT_COL[m.kind] || C.text;
+    let str;
+    if (m.kind === 'charge') str = `! ${compact ? 'CHARGE' : m.name.slice(0, 14)}`;
+    else str = `${INTENT_ICON[m.kind] || '?'}${compact ? '' : ' ' + m.name.slice(0, 12)}${lbl ? ' ' + lbl : ''}`;
+    const w = str.length * 6 + 6, bx = Math.round(x - w / 2);
+    const blink = m.kind === 'charge' && Math.floor(this.time.now / 300) % 2;
+    g.fillStyle(blink ? 0x4a1018 : 0x000000, 0.8).fillRect(bx, y - 2, w, 11);
+    g.lineStyle(1, col, 0.9).strokeRect(bx + 0.5, y - 1.5, w - 1, 10);
+    this.ui.push(text(this, bx + 3, y, str, col).setDepth(512));
+    if (u.mem && u.mem.predict) {
+      const ps = `expects: ${actionName(u.mem.predict)}`;
+      const pw = ps.length * 6 + 6;
+      g.fillStyle(0x1a0a20, 0.9).fillRect(Math.round(x - pw / 2), y - 13, pw, 10);
+      this.ui.push(text(this, Math.round(x - pw / 2) + 3, y - 12, ps, 0xd4a0ff).setDepth(512));
+    }
+  }
   drawTimeline() {
     this.timelineObjs.forEach(o => o.destroy()); this.timelineObjs = [];
-    const order = this.eng.preview(9);
-    const x0 = 8, y0 = 6;
+    const order = this.eng.preview(10);
+    const x0 = 6, y0 = 4, cw = 22;
     const g = this.add.graphics().setDepth(600);
-    g.fillStyle(0x000000, 0.55).fillRect(x0 - 2, y0 - 2, 52 + order.length * 20, 22);
-    this.timelineObjs.push(g, text(this, x0 + 2, y0 + 5, 'NEXT', C.dim).setDepth(601));
+    g.fillStyle(0x000000, 0.6).fillRect(x0 - 2, y0 - 2, 40 + order.length * cw, 28);
+    this.timelineObjs.push(g, text(this, x0 + 1, y0 + 2, 'TURN', C.dim).setDepth(601), text(this, x0 + 1, y0 + 12, 'ORDER', C.dim).setDepth(601));
     order.forEach((u, i) => {
-      const x = x0 + 34 + i * 20, y = y0;
-      g.fillStyle(u.side === 'player' ? 0x1f5f6a : 0x4a1018, 1).fillRect(x, y, 18, 18);
-      if (i === 0) g.lineStyle(1, 0xffe08a).strokeRect(x - 0.5, y - 0.5, 19, 19);
+      const x = x0 + 36 + i * cw, y = y0, me = u.side === 'player';
+      g.fillStyle(me ? 0x1f5f6a : 0x4a1018, 1).fillRect(x, y, 20, 20);
+      if (u.kind === 'player') g.lineStyle(1, 0x5ee0e8, 1).strokeRect(x + 0.5, y + 0.5, 19, 19);
+      if (i === 0) { g.lineStyle(2, 0xffe08a, 1).strokeRect(x - 1, y - 1, 22, 22); }
       const key = u.kind === 'player' ? 'pt_jules' : 'bt_' + u.sprite;
-      const im = this.add.image(x + 9, y + 9, key).setDepth(602);
-      const sc = Math.min(16 / im.width, 16 / im.height); im.setScale(sc);
+      const im = this.add.image(x + 10, y + 10, key).setDepth(602);
+      const sc = Math.min(18 / im.width, 18 / im.height); im.setScale(sc);
       this.timelineObjs.push(im);
+      // enemy's next move, as a colored pip under its first appearance
+      if (u.side === 'enemy' && u.intent && order.indexOf(u) === i) {
+        const col = INTENT_COL[u.intent.move.kind] || C.text;
+        g.fillStyle(0x000000, 1).fillRect(x + 12, y + 14, 9, 9);
+        this.timelineObjs.push(text(this, x + 14, y + 15, INTENT_ICON[u.intent.move.kind] || '?', col).setDepth(603));
+      }
     });
+    if (order[0]) this.timelineObjs.push(text(this, x0 + 36, y0 + 25, order[0].kind === 'player' ? 'YOUR TURN' : order[0].name, order[0].kind === 'player' ? C.accent : C.dim).setDepth(601));
   }
   setLog(t) { this.logText.setText(t || ''); this.logText.x = W / 2 - (t || '').length * 3; this.logText.shadow.x = this.logText.x + 1; }
 
   popup(u, str, color, big = false) {
     const sp = this.sprites.get(u.id); if (!sp) return;
-    const t = shadowText(this, sp.home.x - str.length * 3 * (big ? 2 : 1) + (Math.random() * 10 - 5), sp.home.y - sp.displayHeight / 2 - 6, str, color, big ? 2 : 1).setDepth(700);
-    this.tweens.add({ targets: [t, t.shadow], y: '-=18', alpha: 0, duration: 900, ease: 'quad.out', onComplete: () => t.destroy() });
+    const size = big ? 2 : 1;
+    const t = shadowText(this, sp.home.x - str.length * 3 * size + (Math.random() * 10 - 5), sp.home.y - sp.displayHeight / 2 - 6, str, color, size).setDepth(700);
+    t.setScale(size * 1.8); t.shadow.setScale(size * 1.8);
+    this.tweens.add({ targets: [t, t.shadow], scale: size, duration: 110, ease: 'back.out' });
+    this.tweens.add({ targets: [t, t.shadow], y: '-=18', alpha: 0, delay: 380, duration: 700, ease: 'quad.out', onComplete: () => t.destroy() });
   }
+  // Freeze motion for a beat so hits land.
+  hitStop(ms) {
+    this.tweens.pauseAll();
+    setTimeout(() => { if (this.sys && this.sys.isActive()) this.tweens.resumeAll(); }, ms);
+  }
+  // One-time contextual tips for new players.
+  tip(id, str) {
+    const s = G.state;
+    if (s.flags['tip_' + id] || this.tipObjs) return false;
+    s.flags['tip_' + id] = true;
+    const lines = wrapText(str, 264);
+    const h = lines.length * 10 + 12;
+    this.tipObjs = [panel(this, 90, 188 - h, 300, h, { fill: 0x10202a, edge: 0x5ee0e8, hi: 0xa8f4f8 }).setDepth(560), text(this, 98, 194 - h, 'TIP', C.gold).setDepth(561), text(this, 120, 194 - h, lines.join('\n'), C.text).setDepth(561)];
+    this.tipObjs.forEach(o => this.add.existing(o));
+    return true;
+  }
+  clearTip() { if (this.tipObjs) { this.tipObjs.forEach(o => o.destroy()); this.tipObjs = null; } }
   flash(u) {
     const sp = this.sprites.get(u.id); if (!sp) return;
     sp.setTintFill(0xffffff);
     this.time.delayedCall(70, () => sp.clearTint());
     this.tweens.add({ targets: sp, x: sp.home.x + (u.side === 'enemy' ? 4 : -4), duration: 40, yoyo: true, repeat: 1, onComplete: () => { sp.x = sp.home.x; } });
   }
-  shot(src, tgt, form) {
+  shot(src, tgt, form, idx = 0) {
     const a = this.sprites.get(src.id), b = this.sprites.get(tgt.id); if (!a || !b) return;
     const x0 = a.home.x + (src.side === 'player' ? 14 : -10), y0 = a.home.y - a.height * 0.55;
-    const x1 = b.home.x, y1 = b.home.y - b.height / 2;
-    const col = { raster: 0x5ee0e8, scatter: 0xffe08a, stream: 0xf08a3c, raytrace: 0xffffff, batch: 0x9a5ad8 }[form] || 0xe0485e;
+    const x1 = b.home.x + (Math.random() - 0.5) * 8, y1 = b.home.y - b.displayHeight / 2 + (Math.random() - 0.5) * 8;
+    const col = FORM_COL[form] || 0xe0485e;
+    const burst = (r = 4, c = col) => { const o = this.add.circle(x1, y1, r, c, 0.9).setDepth(651); this.tweens.add({ targets: o, scale: 2.2, alpha: 0, duration: 180, onComplete: () => o.destroy() }); };
+    if (form === 'scatter' || form === 'stream') {
+      const pel = this.add.rectangle(x0, y0, form === 'stream' ? 5 : 3, form === 'stream' ? 2 : 3, col).setDepth(650);
+      pel.rotation = Math.atan2(y1 - y0, x1 - x0);
+      this.tweens.add({ targets: pel, x: x1, y: y1, duration: form === 'stream' ? 70 : 110, onComplete: () => { pel.destroy(); burst(form === 'stream' ? 2 : 3); } });
+      return;
+    }
     const g = this.add.graphics().setDepth(650);
-    const thick = form === 'raytrace' ? 4 : form === 'stream' ? 1 : 2;
-    g.lineStyle(thick, col, 1).lineBetween(x0, y0, x1, y1);
-    g.fillStyle(0xffffff, 1).fillCircle(x1, y1, thick + 2);
-    this.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
+    if (form === 'raytrace') {
+      g.lineStyle(9, 0xbfe8ff, 0.35).lineBetween(x0, y0, x1, y1);
+      g.lineStyle(3, 0xffffff, 1).lineBetween(x0, y0, x1, y1);
+      this.cameras.main.flash(90, 220, 240, 255);
+      burst(7, 0xffffff);
+    } else if (form === 'batch') {
+      const ring = this.add.circle(x1, y1, 6).setStrokeStyle(2, col).setDepth(651);
+      this.tweens.add({ targets: ring, scale: 3, alpha: 0, duration: 260, onComplete: () => ring.destroy() });
+      g.lineStyle(1, col, 0.8).lineBetween(x0, y0, x1, y1);
+    } else {
+      g.lineStyle(form === 'enemy' ? 2 : 2, col, 1).lineBetween(x0, y0, x1, y1);
+      burst(form === 'enemy' ? 3 : 4);
+    }
+    if (src.side === 'player' && idx === 0) { const m = this.add.circle(x0, y0, 4, 0xffffff, 1).setDepth(652); this.tweens.add({ targets: m, scale: 0.2, alpha: 0, duration: 100, onComplete: () => m.destroy() }); }
+    this.tweens.add({ targets: g, alpha: 0, duration: form === 'raytrace' ? 260 : 160, onComplete: () => g.destroy() });
+  }
+  // Per-form muzzle wind-up before the shots.
+  windUp(form) {
+    const sp = this.sprites.get(this.eng.player.id);
+    const x = sp.home.x + 14, y = sp.home.y - sp.height * 0.55;
+    if (form === 'raytrace') {
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2, d = this.add.rectangle(x + Math.cos(a) * 24, y + Math.sin(a) * 24, 2, 2, 0xffffff).setDepth(652);
+        this.tweens.add({ targets: d, x, y, duration: 260, onComplete: () => d.destroy() });
+      }
+      this.tweens.add({ targets: sp, x: sp.home.x - 6, duration: 260 });
+      return 300;
+    }
+    if (form === 'batch') {
+      const arc = this.add.circle(x, y, 4).setStrokeStyle(2, FORM_COL.batch).setDepth(652);
+      this.tweens.add({ targets: arc, scale: 4, alpha: 0, duration: 240, onComplete: () => arc.destroy() });
+      return 200;
+    }
+    if (form === 'stream') { this.tweens.add({ targets: sp, x: sp.home.x - 2, duration: 30, yoyo: true, repeat: 4 }); return 90; }
+    if (form === 'scatter') { this.tweens.add({ targets: sp, angle: -6, duration: 60, yoyo: true }); return 110; }
+    this.tweens.add({ targets: sp, x: sp.home.x - 4, duration: 60, yoyo: true });
+    return 110;
   }
 
   // ---------- turn loop ----------
@@ -226,12 +331,16 @@ export class Battle extends Phaser.Scene {
     switch (e.t) {
       case 'log': this.setLog(e.text); return 380;
       case 'anim': {
-        if (e.kind === 'attack' || e.kind === 'app') {
+        if (e.kind === 'attack') {
+          audio.sfx(e.form === 'raytrace' ? 'laser' : e.form === 'batch' ? 'wave' : e.form === 'stream' ? 'burst' : 'zap');
+          this.setLog(`Jules fires: ${FORMS[e.form].name}!`);
+          this.lastForm = e.form; this.shotIdx = 0;
+          return this.windUp(e.form);
+        }
+        if (e.kind === 'app') {
           const sp = this.sprites.get(e.u.id);
           this.tweens.add({ targets: sp, x: sp.home.x + 10, duration: 90, yoyo: true });
-          if (e.kind === 'attack') { audio.sfx(e.form === 'raytrace' ? 'laser' : 'zap'); this.setLog(`Jules fires: ${FORMS[e.form].name}!`); }
-          else audio.sfx('buff');
-          this.lastForm = e.kind === 'attack' ? e.form : 'raster';
+          audio.sfx('buff'); this.lastForm = 'raster'; this.shotIdx = 0;
           return 160;
         }
         if (e.kind === 'enemy') {
@@ -244,15 +353,26 @@ export class Battle extends Phaser.Scene {
         return 100;
       }
       case 'hit': {
-        if (e.src && e.src.alive !== undefined && e.tgt && e.label !== 'glitch' && e.label !== 'reflect') this.shot(e.src, e.tgt, e.src.side === 'player' ? (this.lastForm || 'raster') : 'enemy');
+        const form = e.src && e.src.side === 'player' ? (this.lastForm || 'raster') : 'enemy';
+        if (e.src && e.src.alive !== undefined && e.tgt && e.label !== 'glitch' && e.label !== 'reflect') this.shot(e.src, e.tgt, form, this.shotIdx++);
         this.flash(e.tgt);
         audio.sfx(e.crit ? 'crit' : 'hit');
-        if (e.tgt.kind === 'player') this.cameras.main.shake(120, e.dmg > e.tgt.maxHp * 0.15 ? 0.012 : 0.005);
+        const heavy = e.dmg > e.tgt.maxHp * 0.15;
+        if (e.tgt.kind === 'player') this.cameras.main.shake(heavy ? 200 : 110, heavy ? 0.014 : 0.005);
+        else if (e.crit || heavy) this.cameras.main.shake(90, e.crit ? 0.006 : 0.004);
+        const stop = e.crit ? 110 : heavy ? 70 : form === 'stream' || form === 'scatter' ? 0 : 35;
+        if (stop) this.hitStop(stop);
         if (e.absorbed) this.popup(e.tgt, `-${e.absorbed}`, 0x8fb0ff);
-        if (e.dmg > 0 || !e.absorbed) this.popup(e.tgt, `${e.dmg}${e.crit ? '!' : ''}`, e.crit ? C.gold : e.label === 'glitch' ? C.purple : C.text, e.crit);
-        if (e.weak) this.time.delayedCall(80, () => this.popup(e.tgt, 'WEAK', C.warn));
+        if (e.dmg > 0 || !e.absorbed) this.popup(e.tgt, `${e.dmg}${e.crit ? '!' : ''}`, e.crit ? C.gold : e.label === 'glitch' ? C.purple : e.weak ? C.warn : C.text, e.crit || heavy);
+        if (e.weak) this.time.delayedCall(80, () => this.popup(e.tgt, this.eng.knows(e.tgt) ? 'WEAK!' : 'weak?', C.warn));
         if (e.resist) this.time.delayedCall(80, () => this.popup(e.tgt, 'resist', C.dim));
-        return e.crit ? 260 : 170;
+        const fast = form === 'stream' ? 90 : form === 'scatter' ? 120 : 170;
+        return (e.crit ? 260 : fast) + stop;
+      }
+      case 'predict': {
+        audio.sfx(e.hit ? 'debuff' : 'glitch');
+        this.popup(e.u, e.hit ? 'PREDICTED' : 'SURPRISED', e.hit ? C.bad : C.good, true);
+        this.setLog(e.text); return 650;
       }
       case 'die': {
         const sp = this.sprites.get(e.u.id); if (!sp) return 50;
@@ -302,6 +422,8 @@ export class Battle extends Phaser.Scene {
       case 'probe': {
         const d = e.u.data;
         G.state.probed = G.state.probed || {}; G.state.probed[e.u.key] = true;
+        const sp = this.sprites.get(e.u.id);
+        if (sp) { const ring = this.add.rectangle(sp.home.x, sp.home.y - sp.displayHeight / 2, sp.displayWidth + 6, sp.displayHeight + 6).setStrokeStyle(1, 0x5ee0e8).setDepth(650); this.tweens.add({ targets: ring, alpha: 0, scale: 1.3, duration: 500, onComplete: () => ring.destroy() }); }
         const w = d.weak.length ? 'Weak: ' + d.weak.join(', ') : 'No weakness';
         const r = d.resist.length ? '  Resists: ' + d.resist.join(', ') : '';
         this.setLog(`${e.u.name}: ${w}${r}`); audio.sfx('tool'); return 900;
@@ -327,8 +449,15 @@ export class Battle extends Phaser.Scene {
   // ---------- commands ----------
   openCommands() {
     this.busy = false;
-    const st = this.stats, p = this.eng.player;
+    const st = this.stats, p = this.eng.player, e = this.eng;
     this.setLog('');
+    const foes = e.enemies;
+    if (foes.some(u => u.data.ai === 'minima' && u.mem.predict)) this.tip('predict', 'MINIMA shows what it expects you to do next. Do something else and it is Exposed. Do what it expects and it counters.');
+    else if (p.heat >= p.heatCap * HOT_AT) this.tip('heat', 'You are Running Hot: +15% damage. At max Heat you Overheat and lose a turn. Vent or Guard to cool down.');
+    else if (foes.some(u => u.intent && u.intent.move.kind === 'charge')) this.tip('charge', 'A Glitch is CHARGING. Its next move hits hard. Guard halves it.');
+    else if (st.apps.includes('probe') && foes.some(u => !e.knows(u) && u.data.weak.length)) this.tip('probe', 'Probe reveals a Glitch\'s weak points. Once probed, hits on its weakness do full bonus damage, forever.');
+    else if (foes.some(u => u.boss)) this.tip('boss', 'Bosses have a trick. Read the Glitchdex entry (and its intents) before you mash Attack.');
+    else this.tip('timeline', 'The bar at the top is the turn order. Icons over Glitches show their next move and damage.');
     const items = [
       { label: `Attack  ${FORMS[st.form].name}`, act: 'attack' },
       { label: 'Apps', act: 'apps', disabled: !st.apps.length },
@@ -347,7 +476,7 @@ export class Battle extends Phaser.Scene {
   describe(act, extra) {
     const st = this.stats, f = FORMS[st.form];
     const desc = {
-      attack: `${f.desc}\nHeat +${Math.round(f.heat * this.eng.heatMul())}  Delay ${f.delay}`,
+      attack: (() => { const p = this.eng.player, h = Math.round(f.heat * this.eng.heatMul()), after = p.heat + h; return `${f.desc}\nHeat +${h} (${Math.round(after)}/${p.heatCap})${after >= p.heatCap ? ' OVERHEAT!' : ''}`; })(),
       apps: 'Run an App from RAM. Costs Power.',
       guard: 'Halve damage until your next turn. Sheds a little Heat. Quick.',
       vent: 'Dump heat fast. Costs tempo, not Power.',
@@ -404,6 +533,7 @@ export class Battle extends Phaser.Scene {
     };
   }
   doAction(a) {
+    this.clearTip();
     this.closeMenus();
     this.busy = true;
     const ev = this.eng.playerAction(a);
