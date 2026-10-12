@@ -1,6 +1,6 @@
 {
   "name": "all-nighter",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "ALL-NIGHTER — a turn-based pixel metroidvania. Debug the building before the sun comes up.",
   "main": "electron/main.js",
   "scripts": {

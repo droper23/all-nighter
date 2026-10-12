@@ -29,6 +29,21 @@ Each sector is one hour of the night. The ending comes at sunrise.
 - **Drones**: USB peripherals and some Apps deploy allies onto the timeline.
 - **Statuses**: Lag, Throttled, Encrypted (shield), Glitched (damage over time), Overclocked, Vulnerable, Guarding.
 - **Map contact**: swing at a roaming Glitch first for a head start. If one catches you from behind, it gets the head start instead.
+- **Running Hot**: at 50%+ Heat you deal 15% more damage. Heat is a dial to ride, not just a cost.
+- **Probe memory**: weakness hits deal a small bonus until a species is Probed, then the full bonus forever (saved).
+- **Patch fatigue**: Patch heals less each time it's used in one battle, so fights can't stall into sustain loops.
+
+### Bosses (each one tests one idea)
+| Boss | Mechanic it demands |
+|---|---|
+| Vendor | Read intents: Guard the charged Dispense, then punish it while it is Tilted. Its display heats your Build. |
+| Autograder | Variety: repeating an action is plagiarism (Exposed, a hit and extra Heat). |
+| RAID-5 | Timing: a dead drive is rebuilt in two steps; spread damage, then drop two drives in a row. |
+| Unfinished Thesis | Target priority: Chapters make it take half damage. |
+| Router Hydra | Build check: the core re-encrypts while 2+ Ports live and its flood scales with Ports; pierce it or prune heads. |
+| MINIMA | Unpredictability: it shows the input it expects (from your last five) and counters it; surprise it and it is Exposed. It also quotes your whole night back at you. |
+
+Balance is checked by `tests/battle.test.mjs`: a seeded careful bot and an attack-only masher fight every boss with the gear actually available at that point. On Standard a careful player should win and mashing should lose.
 
 ## The Build (motherboard screen)
 | Slot | Does |
@@ -56,6 +71,11 @@ Each sector is one hour of the night. The ending comes at sunrise.
 | 7 AM | The Basement / HOLLIS-1 | **MINIMA** (3 phases) | the ending |
 
 **Keycards** open colored doors: Student, TA, Staff, Faculty. **Outlets** are save points that heal you, respawn Glitches, and let you fast-travel. **Postgame:** **Room 404**, a floor that isn't on the blueprints.
+
+## Coming back (no real-time timers)
+- **Night Shift** (Okafor, Byte Café): three-wave fights per cleared sector, each run with a twist (Brownout, Heatwave, Overtime, Cold Snap) that rotates with runs worked. Pays Silicon; first clears give rare parts.
+- **Night Specials**: three perk-rolled parts at Okafor's cart, restocked every 6 wins and after each boss.
+- **Return quests**: Benchy Census (five escaped boats behind later-tool gates in sectors 1-3) and Sleep Study (listen to all 14 sleepers). Both pay off in the ending.
 
 ## Difficulty (change anytime)
 Pass/Fail (story) · Standard · Honors · Dean's List.
