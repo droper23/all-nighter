@@ -17,6 +17,7 @@ export class Battle extends Phaser.Scene {
 
   create(data) {
     this.data0 = data;
+    Object.assign(this, { ended: false, resultUpdate: null, waitKey: null, targeting: null, banner: null, lastTarget: null, lastCmd: 0, lastForm: null, menu: null, sub: null, subPanel: null });
     const s = G.state;
     this.keys = new Input(this);
     this.stats = computeStats(s);

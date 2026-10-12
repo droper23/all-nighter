@@ -3,7 +3,7 @@ export default {
   b_stairs: {
     name: 'B2 Stairwell', short: 'Stairs', sector: 'core', theme: 'core', music: 'core', map: [0, 0], eerie: true,
     grid: [
-      '##############N#',
+      '#############N##',
       '##n##_#####ss.##',
       '#...........ss.#',
       '#.1............#',

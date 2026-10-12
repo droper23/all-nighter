@@ -128,7 +128,7 @@ export default {
     ],
     ents: {
       D: { type: 'door', to: 'arc_stacks', at: 'D' },
-      E: { type: 'door', to: 'tun_entry', at: 'A' },
+      E: { type: 'door', to: 'tun_entry', at: 'A', gated: true },
       G: { type: 'door', to: 'thesis_room', at: 'G' },
       1: { type: 'valve', steam: 'arc_boiler' },
       2: { type: 'enemy', group: ['overdue', 'bookworm'] },

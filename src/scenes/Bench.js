@@ -12,7 +12,7 @@ const REFLASH = { scrap: 4, silicon: 1 };
 export class Bench extends Phaser.Scene {
   constructor() { super('Bench'); }
   create() {
-    this.keys = new Input(this); this.objs = [];
+    this.keys = new Input(this); this.objs = []; this.list = null;
     this.add.rectangle(0, 0, W, H, 0x07060c, 0.9).setOrigin(0);
     this.openRoot();
   }

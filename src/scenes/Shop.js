@@ -23,7 +23,7 @@ export class Shop extends Phaser.Scene {
   create() {
     this.keys = new Input(this);
     this.add.rectangle(0, 0, W, H, 0x07060c, 0.9).setOrigin(0);
-    this.objs = [];
+    this.objs = []; this.list = null;
     this.openRoot();
   }
   clear() { this.objs.forEach(o => o.destroy()); this.objs = []; if (this.list) this.list.destroy(); this.list = null; }

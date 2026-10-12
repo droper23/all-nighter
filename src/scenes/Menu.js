@@ -34,7 +34,7 @@ export class Menu extends Phaser.Scene {
   constructor() { super('Menu'); }
   create(data = {}) {
     this.keys = new Input(this);
-    this.objs = []; this.mode = null;
+    this.objs = []; this.mode = null; this.list = null; this.list2 = null; this.infoObjs = null; this.descObj = null; this.settingsAdjust = null; this.sparks = []; this.fan = null;
     this.add.rectangle(0, 0, W, H, 0x07060c, 0.92).setOrigin(0);
     if (data.tab === 'build') this.openBuild(true);
     else if (data.tab === 'map') this.openMap(true);

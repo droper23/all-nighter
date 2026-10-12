@@ -25,7 +25,7 @@ export class World extends Phaser.Scene {
     if (!this.room) { console.error('Missing room', s.room); s.room = 'studio'; this.room = ROOMS.studio; }
     this.keys = new Input(this);
     this.dialogue = new Dialogue(this);
-    this.ents = []; this.busy = false; this.dark = null; this.layer = null; this.map = null; this.toast = null; this.pushT = 0; this.stepT = 0; this.minuteT = 0;
+    this.ents = []; this.busy = false; this.battleOpts = null; this.ignoreDoor = null; this.dark = null; this.layer = null; this.map = null; this.toast = null; this.pushT = 0; this.stepT = 0; this.minuteT = 0;
     s.visited[s.room] = true;
     this.buildRoom();
     this.spawnPlayer(data);

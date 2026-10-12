@@ -28,6 +28,7 @@ export class Ending extends Phaser.Scene {
   constructor() { super('Ending'); }
   create(data) {
     this.kind = data.kind || 'retrain';
+    this.mode = null; this.creditsText = null;
     this.keys = new Input(this);
     this.page = 0; this.lines = EPILOGUE[this.kind];
     this.sky = this.add.graphics();
@@ -47,7 +48,7 @@ export class Ending extends Phaser.Scene {
       const r = lerp(lerp(20, 255, p), lerp(60, 255, p), t), gg = lerp(lerp(14, 150, p), lerp(30, 200, p), t), b = lerp(lerp(48, 120, p), lerp(70, 160, p), t);
       g.fillStyle(Phaser.Display.Color.GetColor(Math.min(255, r), Math.min(255, gg), Math.min(255, b)), 1).fillRect(0, y, W, 1);
     }
-    g.fillStyle(0xffe08a, 1).fillCircle(W / 2, H - 40 - p * 60, 26);
+    g.fillStyle(0xfff2a8, 0.25).fillCircle(400, 230 - p * 150, 40); g.fillStyle(0xffe08a, 1).fillCircle(400, 230 - p * 150, 24);
     g.fillStyle(0x0d0b14, 1).fillRect(120, 150, 240, 120).fillRect(200, 124, 80, 30).fillRect(232, 104, 16, 22).fillRect(0, 240, W, 30);
     for (let r = 0; r < 5; r++) for (let c = 0; c < 12; c++) g.fillStyle(0xffe08a, 0.4 + 0.5 * p).fillRect(132 + c * 19, 160 + r * 16, 9, 8);
   }

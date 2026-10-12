@@ -9,7 +9,7 @@ export class Title extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
     this.keys = new Input(this);
-    this.objs = [];
+    this.objs = []; this.list = null;
     this.drawScene();
     this.started = false;
     this.prompt = shadowText(this, W / 2 - 66, 196, 'PRESS Z OR ENTER', C.text);
