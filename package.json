@@ -1,0 +1,39 @@
+{
+  "name": "all-nighter",
+  "version": "0.1.0",
+  "description": "ALL-NIGHTER — a turn-based pixel metroidvania. Debug the building before the sun comes up.",
+  "main": "electron/main.js",
+  "scripts": {
+    "web": "node tools/server.js",
+    "start": "electron .",
+    "test": "node --test tests/*.test.mjs",
+    "dist": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "phaser": "^3.80.1"
+  },
+  "build": {
+    "appId": "com.allnighter.game",
+    "productName": "ALL-NIGHTER",
+    "files": [
+      "index.html",
+      "src/**/*",
+      "vendor/**/*",
+      "electron/**/*",
+      "tools/server.js"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games"
+    },
+    "win": {
+      "target": "portable"
+    }
+  }
+}

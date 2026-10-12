@@ -1,0 +1,167 @@
+// Glitches. Moves: kind drives the intent icon (atk multi aoe shield buff debuff heal summon charge drain special).
+// ai: array = cycle; { rand: {move: weight} } = weighted random; string = custom script in battle/bosses.js.
+const M = (name, kind, o = {}) => ({ name, kind, pow: 1, hits: 1, delay: 100, ...o });
+
+export const ENEMIES = {
+  // ---------------- 2 AM · Lobby ----------------
+  fizzbit: { name: 'Fizzbit', sprite: 'fizzbit', hp: 22, atk: 6, def: 1, spd: 95, xp: 6, flex: 5, weak: ['scatter'], resist: [],
+    desc: 'A soda can that has achieved carbonation of the soul.',
+    moves: { hop: M('Can Hop', 'atk'), spray: M('Sticky Spray', 'debuff', { pow: 0.5, status: ['lag', 1] }) }, ai: ['hop', 'hop', 'spray'] },
+  lampy: { name: 'Lamp Wraith', sprite: 'lampy', hp: 28, atk: 8, def: 2, spd: 80, xp: 7, flex: 6, weak: ['batch'], resist: ['stream'],
+    desc: 'A desk lamp that stared at one essay for too long.',
+    moves: { glare: M('Glare', 'debuff', { pow: 0, status: ['throttled', 2] }), bonk: M('Shade Bonk', 'atk', { pow: 1.2 }) }, ai: ['glare', 'bonk', 'bonk'] },
+  jam: { name: 'Paper Jam', sprite: 'jam', hp: 34, atk: 6, def: 3, spd: 70, xp: 8, flex: 7, weak: ['raster'], resist: ['scatter'],
+    desc: 'PC LOAD LETTER. It does not know what that means either.',
+    moves: { storm: M('Paper Storm', 'multi', { pow: 0.45, hits: 3 }), jam: M('Jamming...', 'charge', { delay: 80 }), eject: M('Eject Tray', 'atk', { pow: 2.0 }) }, ai: ['storm', 'jam', 'eject'] },
+  dustbun: { name: 'Dustbunny', sprite: 'dustbun', hp: 30, atk: 9, def: 4, spd: 105, xp: 8, flex: 6, weak: ['raytrace'], resist: [],
+    desc: 'A robot vacuum with a map of the building and nowhere to be.',
+    moves: { ram: M('Ram', 'atk', { pow: 1.1 }), suck: M('Vacuum', 'drain', { pow: 0.4, drain: 6 }) }, ai: { rand: { ram: 3, suck: 2 } } },
+  vendor: { name: 'VENDOR', sprite: 'vendor', boss: true, hp: 160, atk: 10, def: 4, spd: 85, xp: 90, flex: 150, weak: ['raster'], resist: ['scatter'],
+    desc: 'The lobby vending machine. Exact change only. Forever.',
+    moves: {
+      barrage: M('Can Barrage', 'multi', { pow: 0.42, hits: 4 }), exact: M('EXACT CHANGE ONLY', 'charge', { delay: 70 }),
+      dispense: M('Dispense', 'atk', { pow: 2.3 }), restock: M('Restock', 'summon', { summon: 'fizzbit' }),
+      coin: M('Coin Return', 'shield', { shield: 40 }), glow: M('Display Glow', 'debuff', { pow: 0.3, status: ['throttled', 2] }),
+    }, ai: 'vendor' },
+
+  // ---------------- 3 AM · Intro Labs ----------------
+  solderimp: { name: 'Solder Imp', sprite: 'solderimp', hp: 48, atk: 12, def: 4, spd: 100, xp: 14, flex: 11, weak: ['raster'], resist: ['raytrace'],
+    desc: 'A molten bead of 60/40 with a grudge. Lead-free it is not.',
+    moves: { burn: M('Flux Burn', 'atk', { pow: 0.8, status: ['glitched', 2] }), poke: M('Hot Tip', 'atk', { pow: 1.15 }) }, ai: ['burn', 'poke', 'poke'] },
+  crawler: { name: 'Jumper Crawler', sprite: 'crawler', hp: 40, atk: 11, def: 3, spd: 118, xp: 13, flex: 10, weak: ['batch'], resist: [],
+    desc: 'Eight jumper wires, no breadboard, all legs.',
+    moves: { tangle: M('Tangle', 'debuff', { pow: 0.5, status: ['lag', 1] }), bite: M('Pin Bite', 'multi', { pow: 0.6, hits: 2 }) }, ai: { rand: { tangle: 1, bite: 2 } } },
+  oscillo: { name: 'Oscillo', sprite: 'oscillo', hp: 55, atk: 10, def: 5, spd: 80, xp: 15, flex: 12, weak: ['raytrace'], resist: ['scatter'],
+    desc: 'An oscilloscope whose trace has started drawing faces.',
+    moves: { sine: M('Sine Swell', 'buff', { target: 'allies', status: ['amped', 3] }), square: M('Square Wave', 'atk', { pow: 1.3 }) }, ai: ['sine', 'square', 'square'] },
+  printhead: { name: 'Printhead', sprite: 'printhead', hp: 62, atk: 13, def: 6, spd: 75, xp: 17, flex: 14, weak: ['stream'], resist: [],
+    desc: 'A 3D printer that only prints tiny boats. Aggressively.',
+    moves: { extrude: M('Extrude Benchy', 'summon', { summon: 'benchy' }), nozzle: M('Nozzle Jab', 'atk', { pow: 1.4 }) }, ai: ['extrude', 'nozzle', 'nozzle'] },
+  benchy: { name: 'Benchy', sprite: 'benchy', hp: 16, atk: 8, def: 2, spd: 90, xp: 3, flex: 1, weak: [], resist: [], minion: true,
+    desc: 'A calibration boat. It sails on desk.', moves: { ram: M('Tiny Ram', 'atk') }, ai: ['ram'] },
+  autograder: { name: 'THE AUTOGRADER', sprite: 'autograder', boss: true, hp: 330, atk: 15, def: 7, spd: 92, xp: 220, flex: 300, weak: ['stream'], resist: ['raster'],
+    desc: 'Runs every submission against hidden tests. Punishes repetition: never use the same action twice in a row.',
+    moves: {
+      redpen: M('Red Pen', 'multi', { pow: 0.45, hits: 3 }), deadline: M('Deadline Approaching', 'charge', { delay: 70 }),
+      late: M('Late Penalty', 'atk', { pow: 2.4 }), rubric: M('Strict Rubric', 'debuff', { pow: 0.3, status: ['throttled', 2] }),
+      partial: M('Partial Credit', 'heal', { heal: 0.08 }),
+    }, ai: 'autograder' },
+
+  // ---------------- 4 AM · Server Room ----------------
+  fanwraith: { name: 'Fan Wraith', sprite: 'fanwraith', hp: 74, atk: 15, def: 6, spd: 100, xp: 26, flex: 18, weak: ['raster'], resist: ['batch'],
+    desc: 'A case fan spun so long it forgot how to stop.',
+    moves: { chill: M('Chill Draft', 'atk', { pow: 0.8, status: ['lag', 1] }), gust: M('Gust', 'aoe', { pow: 0.75 }) }, ai: ['chill', 'gust'] },
+  packetrat: { name: 'Packet Rat', sprite: 'packetrat', hp: 56, atk: 16, def: 4, spd: 128, xp: 22, flex: 16, weak: ['scatter'], resist: [],
+    desc: 'Carries data nobody asked for to places nobody lives.',
+    moves: { nibble: M('Nibble', 'multi', { pow: 0.4, hits: 3 }), drop: M('Packet Drop', 'debuff', { pow: 0.6, status: ['exposed', 2] }) }, ai: { rand: { nibble: 3, drop: 1 } } },
+  cacheghoul: { name: 'Cache Ghoul', sprite: 'cacheghoul', hp: 92, atk: 17, def: 8, spd: 85, xp: 30, flex: 22, weak: ['stream'], resist: ['raytrace'],
+    desc: 'It remembers everything you did. Recently.',
+    moves: { recall: M('Recall', 'atk', { pow: 1.35 }), hoard: M('Hoard', 'shield', { shield: 0.3 }) }, ai: ['recall', 'hoard', 'recall'] },
+  sentinel: { name: 'Firewall Sentinel', sprite: 'sentinel', hp: 86, atk: 15, def: 10, spd: 80, xp: 32, flex: 24, weak: ['raytrace'], resist: ['raster', 'scatter', 'stream'],
+    desc: 'Blocks everything. Including itself, sometimes.',
+    moves: { encrypt: M('Encrypt All', 'shield', { target: 'allies', shield: 0.25 }), block: M('Port Block', 'atk', { pow: 1.2 }) }, ai: ['encrypt', 'block', 'block'] },
+  drive: { name: 'RAID Drive', sprite: 'drive', hp: 85, atk: 12, def: 8, spd: 62, xp: 70, flex: 80, weak: ['batch'], resist: [],
+    desc: 'RAID-5: survives one failed drive by rebuilding it. Two at once, though...',
+    moves: { spin: M('Spin Up', 'atk', { pow: 1.0 }), seek: M('Seek Error', 'multi', { pow: 0.4, hits: 3 }), rebuild: M('Rebuild Parity', 'heal', { heal: 0 }), click: M('Click of Death', 'debuff', { pow: 0.5, status: ['exposed', 2] }) },
+    ai: 'raid' },
+
+  // ---------------- 5 AM · Thesis Archive ----------------
+  bookworm: { name: 'Bookworm', sprite: 'bookworm', hp: 112, atk: 20, def: 8, spd: 90, xp: 44, flex: 30, weak: ['raster'], resist: [],
+    desc: 'Ate through three dissertations. Still hungry for citations.',
+    moves: { chew: M('Chew', 'atk', { pow: 1.0, status: ['glitched', 2] }), burrow: M('Burrow', 'shield', { shield: 0.3 }) }, ai: ['chew', 'chew', 'burrow'] },
+  margin: { name: 'Margin Note', sprite: 'margin', hp: 82, atk: 22, def: 5, spd: 120, xp: 40, flex: 28, weak: ['batch'], resist: ['raytrace'],
+    desc: '"See me." In red. Floating.',
+    moves: { scribble: M('Scribble', 'debuff', { pow: 0.4, status: ['exposed', 2] }), annotate: M('Annotate', 'multi', { pow: 0.45, hits: 3 }) }, ai: ['scribble', 'annotate', 'annotate'] },
+  overdue: { name: 'Overdue', sprite: 'overdue', hp: 140, atk: 24, def: 12, spd: 65, xp: 52, flex: 40, weak: ['raytrace'], resist: ['scatter'],
+    desc: 'A book cart returned in 1987. The fine is now sentient.',
+    moves: { fee: M('Late Fee', 'drain', { pow: 0.6, drain: 8 }), roll: M('Roll Over', 'atk', { pow: 1.5 }) }, ai: ['fee', 'roll'] },
+  inkblot: { name: 'Inkblot', sprite: 'inkblot', hp: 96, atk: 21, def: 6, spd: 100, xp: 44, flex: 30, weak: ['stream'], resist: [],
+    desc: 'What do you see? It sees you.',
+    moves: { splash: M('Splash', 'aoe', { pow: 0.7 }), rorschach: M('Rorschach', 'debuff', { pow: 0.3, status: ['random', 2] }) }, ai: { rand: { splash: 2, rorschach: 1 } } },
+  chapter: { name: 'Chapter', sprite: 'chapter', hp: 60, atk: 18, def: 6, spd: 70, xp: 8, flex: 4, weak: ['batch'], resist: [], minion: true,
+    desc: 'A chapter of the thesis. Cites itself.', moves: { cite: M('Self-Cite', 'atk', { pow: 0.8 }) }, ai: ['cite'] },
+  thesis: { name: 'THE UNFINISHED THESIS', sprite: 'thesis', boss: true, hp: 560, atk: 22, def: 10, spd: 80, xp: 600, flex: 600, weak: ['raytrace'], resist: ['scatter'],
+    desc: 'Forty-two years in progress. Grows a chapter every turn. While Chapters stand, it is Cited (takes half damage).',
+    moves: {
+      write: M('Write Chapter', 'summon', { summon: 'chapter' }), revise: M('Revise', 'heal', { heal: 0.06 }),
+      defend: M('Thesis Defense', 'charge', { delay: 70 }), committee: M('The Committee', 'aoe', { pow: 2.0 }),
+      lit: M('Lit Review', 'multi', { pow: 0.5, hits: 4 }),
+    }, ai: 'thesis' },
+
+  // ---------------- 6 AM · Steam Tunnels ----------------
+  steamhound: { name: 'Steam Hound', sprite: 'steamhound', hp: 142, atk: 27, def: 10, spd: 110, xp: 70, flex: 44, weak: ['stream'], resist: [],
+    desc: 'Pressure-regulated. Poorly.',
+    moves: { scald: M('Scald', 'atk', { pow: 1.0, status: ['glitched', 2] }), howl: M('Howl', 'buff', { target: 'self', status: ['amped', 3] }) }, ai: ['howl', 'scald', 'scald', 'scald'] },
+  cablerat: { name: 'Cat6 Rat', sprite: 'cablerat', hp: 100, atk: 25, def: 8, spd: 132, xp: 62, flex: 40, weak: ['scatter'], resist: [],
+    desc: 'Category 6. Category: Rat.',
+    moves: { gnaw: M('Gnaw', 'multi', { pow: 0.45, hits: 3 }), short: M('Short Circuit', 'debuff', { pow: 0.5, status: ['lag', 1] }) }, ai: { rand: { gnaw: 2, short: 1 } } },
+  pipemimic: { name: 'Pipe Mimic', sprite: 'pipemimic', hp: 184, atk: 30, def: 14, spd: 70, xp: 84, flex: 56, weak: ['raytrace'], resist: ['raster'],
+    desc: 'Looks like every other pipe. That is the problem.',
+    moves: { clamp: M('Clamp', 'atk', { pow: 1.6 }), pressurize: M('Pressurize', 'charge', { delay: 70 }), burst: M('Burst', 'aoe', { pow: 1.4 }) }, ai: ['clamp', 'pressurize', 'burst'] },
+  pingbat: { name: 'Ping Bat', sprite: 'pingbat', hp: 90, atk: 24, def: 6, spd: 142, xp: 60, flex: 40, weak: ['batch'], resist: ['raytrace'],
+    desc: 'Echolocation via ICMP. 64 bytes from you.',
+    moves: { echo: M('Echo', 'debuff', { pow: 0.3, status: ['exposed', 2] }), screech: M('Screech', 'aoe', { pow: 0.65 }) }, ai: ['echo', 'screech'] },
+  hydra: { name: 'ROUTER HYDRA', sprite: 'hydra', boss: true, hp: 520, atk: 26, def: 14, spd: 70, xp: 900, flex: 900, weak: [], resist: [],
+    desc: 'The core router. Its Port heads regrow. While two or more Ports are up, the core is Encrypted every turn.',
+    moves: { reroute: M('Reroute', 'summon', { summon: 'port' }), handshake: M('Handshake', 'shield', { shield: 0.12 }), flood: M('Packet Flood', 'aoe', { pow: 1.0 }) }, ai: 'hydra' },
+  port: { name: 'Port Head', sprite: 'port', hp: 140, atk: 20, def: 10, spd: 85, xp: 30, flex: 10, weak: ['raster'], resist: [], minion: true,
+    desc: 'A head. Of a router. Which is a hydra.',
+    moves: { bite: M('Bite', 'atk', { pow: 1.1 }), spit: M('Spit Packets', 'multi', { pow: 0.4, hits: 3 }) }, ai: ['bite', 'spit'] },
+
+  // ---------------- 7 AM · The Basement ----------------
+  punchgolem: { name: 'Punchcard Golem', sprite: 'punchgolem', hp: 222, atk: 34, def: 16, spd: 75, xp: 110, flex: 70, weak: ['stream'], resist: ['scatter'],
+    desc: 'Ten thousand punch cards in the shape of a programmer.',
+    moves: { stamp: M('Stamp', 'atk', { pow: 1.4 }), holes: M('Hole Punch', 'debuff', { pow: 0.4, status: ['exposed', 2] }) }, ai: ['holes', 'stamp', 'stamp'] },
+  tapereel: { name: 'Tape Reel', sprite: 'tapereel', hp: 150, atk: 32, def: 12, spd: 105, xp: 96, flex: 64, weak: ['raster'], resist: [],
+    desc: 'Nine-track magnetic tape. Rewinds itself and others.',
+    moves: { rewind: M('Rewind', 'heal', { heal: 0.2, target: 'ally' }), wind: M('Wind', 'multi', { pow: 0.7, hits: 2 }) }, ai: ['wind', 'rewind', 'wind'] },
+  tubewisp: { name: 'Tube Wisp', sprite: 'tubewisp', hp: 120, atk: 36, def: 8, spd: 126, xp: 100, flex: 66, weak: ['batch'], resist: ['raytrace'],
+    desc: 'A vacuum tube that glows with something other than heat.',
+    moves: { glow: M('Cathode Glow', 'aoe', { pow: 0.7, status: ['glitched', 2] }), flicker: M('Flicker', 'shield', { shield: 0.3 }) }, ai: ['glow', 'flicker'] },
+  nullptr: { name: 'Null Pointer', sprite: 'nullptr', hp: 180, atk: 38, def: 10, spd: 100, xp: 120, flex: 80, weak: ['raytrace'], resist: ['stream'],
+    desc: 'Points at nothing. Nothing points back.',
+    moves: { deref: M('Dereference', 'charge', { delay: 70 }), segv: M('SEGFAULT', 'atk', { pow: 2.2 }), void: M('Free()', 'debuff', { pow: 0.4, status: ['purge', 0] }) }, ai: ['void', 'deref', 'segv'] },
+  dangling: { name: 'Dangling Pointer', sprite: 'nullptr', hp: 90, atk: 24, def: 6, spd: 95, xp: 10, flex: 5, weak: ['scatter'], resist: [], minion: true,
+    desc: 'Allocated by MINIMA. Points at you.', moves: { poke: M('Poke', 'atk', { pow: 1.0 }), leak: M('Memory Leak', 'debuff', { pow: 0.4, status: ['glitched', 2] }) }, ai: ['poke', 'leak'] },
+  minima: { name: 'MINIMA', sprite: 'minima', boss: true, hp: 820, atk: 34, def: 14, spd: 100, xp: 0, flex: 0, weak: [], resist: [],
+    desc: 'Your capstone. Minimizes loss. Has decided you are loss.',
+    moves: {
+      descent: M('Gradient Descent', 'debuff', { pow: 0.6, status: ['throttled', 2] }), epoch: M('Epoch', 'multi', { pow: 0.5, hits: 4 }),
+      dropout: M('Dropout', 'debuff', { pow: 0, status: ['purge', 0] }), overfit: M('Overfit', 'charge', { delay: 70 }),
+      predict: M('Predict', 'atk', { pow: 2.4 }), minimize: M('MINIMIZE', 'aoe', { pow: 1.3 }), spawn: M('Allocate', 'summon', { summon: 'dangling' }),
+      backprop: M('Backprop', 'heal', { heal: 0.05 }),
+    }, ai: 'minima' },
+
+  // ---------------- Room 404 (postgame) ----------------
+  missing: { name: 'Missing Texture', sprite: 'missing', hp: 340, atk: 48, def: 18, spd: 110, xp: 220, flex: 120, weak: ['batch'], resist: [],
+    desc: 'Magenta and black. The universe forgot to load it.',
+    moves: { checker: M('Checkerboard', 'multi', { pow: 0.5, hits: 4 }), unload: M('Unload', 'debuff', { pow: 0.5, status: ['exposed', 3] }) }, ai: ['checker', 'unload'] },
+  segfault: { name: 'Segfault', sprite: 'segfault', hp: 300, atk: 54, def: 14, spd: 130, xp: 240, flex: 130, weak: ['raytrace'], resist: ['stream'],
+    desc: 'Core dumped. Core angry.',
+    moves: { dump: M('Core Dump', 'aoe', { pow: 1.0 }), access: M('Access Violation', 'atk', { pow: 1.6 }) }, ai: { rand: { dump: 1, access: 2 } } },
+  ventner: { name: 'VENTNER.PROC', sprite: 'ventner', boss: true, hp: 4200, atk: 52, def: 20, spd: 115, xp: 3000, flex: 3000, weak: [], resist: [],
+    desc: 'The professor never left. He became a background process. He wants to see what you built.',
+    moves: {
+      lecture: M('Lecture', 'debuff', { pow: 0.5, status: ['lag', 2] }), quiz: M('Pop Quiz', 'multi', { pow: 0.5, hits: 5 }),
+      office: M('Office Hours', 'heal', { heal: 0.05 }), thesis: M('Defend Your Thesis', 'charge', { delay: 60 }),
+      tenure: M('Tenure', 'aoe', { pow: 2.6 }), punch: M('Punchcard Volley', 'atk', { pow: 1.7 }),
+    }, ai: 'ventner' },
+};
+
+// Allied drones.
+export const DRONES = {
+  cam:    { name: 'Webcam Drone', sprite: 'drone_cam', hp: 0.25, atkMul: 0.4, spd: 110, act: 'probe' },
+  turret: { name: 'Turret', sprite: 'drone_turret', hp: 0.35, atkMul: 0.6, spd: 92, act: 'shoot' },
+  fork:   { name: 'Fork', sprite: 'drone_fork', hp: 0.05, atkMul: 0.6, spd: 140, act: 'shoot', life: 2 },
+};
+
+// Loot tables per sector: parts that can drop from that sector's Glitches.
+export const LOOT = {
+  lobby:   { parts: ['cpu_k2', 'cpu_m4', 'gpu_spray', 'gpu_hose', 'ram_4gb', 'ram_kb', 'psu_bronze', 'cool_tower', 'usb_rgb', 'usb_mouse', 'usb_duck'], items: ['ramen', 'volt', 'paste'] },
+  labs:    { parts: ['cpu_k2', 'cpu_m4', 'gpu_spray', 'gpu_hose', 'gpu_raster2', 'ram_kb', 'ram_vort', 'psu_bronze', 'cool_tower', 'cool_slip', 'usb_duck', 'usb_cactus'], items: ['ramen', 'burrito', 'volt', 'paste', 'gummy'] },
+  servers: { parts: ['cpu_v6', 'cpu_h8', 'gpu_lancet', 'gpu_array', 'gpu_raster2', 'ram_mono', 'ram_halc', 'ram_vort', 'psu_gold', 'cool_aio', 'cool_slip', 'usb_key', 'usb_mug'], items: ['burrito', 'volt', 'coldbrew', 'tape'] },
+  archive: { parts: ['cpu_v6', 'cpu_h8', 'cpu_m12', 'gpu_spray2', 'gpu_hose2', 'ram_mono', 'ram_halc', 'psu_gold', 'psu_ti', 'cool_block', 'cool_aio', 'usb_cam', 'usb_hub'], items: ['burrito', 'pizza', 'volt', 'duster', 'gummy'] },
+  tunnels: { parts: ['cpu_k8', 'cpu_m12', 'gpu_lancet2', 'gpu_array2', 'gpu_hose2', 'gpu_raster3', 'ram_core', 'psu_over', 'psu_ti', 'cool_halo', 'cool_block', 'usb_turret', 'usb_hub'], items: ['pizza', 'volt', 'coldbrew', 'duster', 'tape'] },
+  core:    { parts: ['cpu_k8', 'gpu_raster3', 'gpu_lancet2', 'gpu_array2', 'gpu_spray2', 'ram_core', 'psu_over', 'cool_halo', 'usb_turret'], items: ['pizza', 'volt', 'paste', 'duster'] },
+  void:    { parts: ['cpu_qbit', 'gpu_swarm', 'gpu_vector', 'ram_hbm', 'psu_fusion', 'cool_ln2', 'gpu_raster3', 'cpu_k8'], items: ['pizza', 'volt', 'duster'] },
+};
