@@ -21,7 +21,7 @@ export class Battle extends Phaser.Scene {
     const s = G.state;
     this.keys = new Input(this);
     this.stats = computeStats(s);
-    this.eng = new Engine({ player: s, stats: this.stats, enemies: data.group, diff: DIFFICULTY[s.difficulty], preempt: data.preempt, items: s.items, boss: data.boss, canFlee: data.canFlee });
+    this.eng = new Engine({ player: s, stats: this.stats, enemies: data.group, diff: DIFFICULTY[s.difficulty], preempt: data.preempt, items: s.items, boss: data.boss, canFlee: data.canFlee, known: new Set(Object.keys(s.probed || {})), mods: data.mods });
     this.sprites = new Map(); this.busy = true; this.menu = null; this.sub = null; this.ui = [];
     this.drawBackground(data.bg || 'lobby');
     this.layoutUnits(true);

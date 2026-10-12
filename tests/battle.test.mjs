@@ -1,72 +1,61 @@
-// Simulates battles with a simple auto-player to catch crashes and sanity-check balance.
+// Balance sims. A "smart" player (reads intents, manages Heat, plays each boss's mechanic) and a
+// "masher" (attack only) fight every boss with the gear actually available at that point.
+// Seeded, so results are stable. Print the table with: node tools/sim.mjs
 import test from 'node:test';
 import assert from 'node:assert';
 import { Battle } from '../src/battle/engine.js';
-import { newGame, computeStats, DIFFICULTY, makePart } from '../src/core/state.js';
+import { DIFFICULTY } from '../src/core/state.js';
 import { ENEMIES } from '../src/data/enemies.js';
+import { ROOMS } from '../src/data/rooms/index.js';
+import { BOSSES, runBoss, smart, masher, setup, play, rng } from './sim.mjs';
 
-function autoplay(b, maxTurns = 400) {
-  let n = 0, pt = 0;
-  while (!b.outcome() && n++ < maxTurns) {
-    const u = b.nextUnit();
-    b.startTurn(u);
-    if (b.outcome()) break;
-    if (!u.alive) { b.endTurn(u, 100); continue; }
-    if (u.kind === 'player') {
-      pt++;
-      if (u.stunned) { b.stunnedTurn(u); continue; }
-      const st = b.stats;
-      let a;
-      const grader = b.enemies.some(e => e.key === 'autograder');
-      if (u.hp < u.maxHp * 0.45 && st.apps.includes('patch') && u.pwr >= b.appCost('patch') && b.memory.lastAction !== 'app:patch') a = { type: 'app', app: 'patch' };
-      else if (u.hp < u.maxHp * 0.35 && b.items.ramen) a = { type: 'item', item: 'ramen' };
-      else if (u.heat + st.formDef.heat * 1.2 >= u.heatCap && b.memory.lastAction !== 'vent') a = { type: 'vent' };
-      else if (grader && b.memory.lastAction === 'attack') a = u.pwr >= 2 ? { type: 'app', app: 'probe', target: b.enemies[0] } : { type: 'guard' };
-      else {
-        const boss = b.enemies.find(e => e.boss);
-        const minions = b.enemies.filter(e => !e.boss);
-        const focusMinions = boss && (boss.statuses.cited || (boss.key === 'hydra' && minions.length >= 2) || minions.length >= 2);
-        const tgt = boss && !focusMinions ? boss : minions.sort((x, y) => x.hp - y.hp)[0] || boss;
-        a = { type: 'attack', target: tgt };
-      }
-      b.playerAction(a);
-    } else if (u.kind === 'drone') b.droneAction(u);
-    else b.enemyAction(u);
-  }
-  return { result: b.outcome(), turns: pt };
-}
+const DIFF = process.env.DIFF || 'standard';
+const results = {};
+const get = (k, d = DIFF, policy = smart) => {
+  const key = `${k}:${d}:${policy.name}`;
+  return (results[key] = results[key] || runBoss(k, { diff: d, policy }));
+};
 
-function setup(level, gear = []) {
-  const s = newGame('standard'); s.level = level;
-  for (const [slot, id] of gear) { const p = makePart(id); s.parts.push(p); if (slot === 'ram') s.build.ram[0] = p.uid; else s.build[slot] = p.uid; }
-  const stats = computeStats(s); s.hp = stats.maxHp;
-  return { s, stats };
-}
-
-const CASES = [
-  ['lobby trio', 2, [], ['fizzbit', 'lampy', 'jam']],
-  ['vendor', 4, [['gpu', 'gpu_hose'], ['cpu', 'cpu_k2']], ['vendor']],
-  ['autograder', 7, [['gpu', 'gpu_hose'], ['cpu', 'cpu_k2'], ['psu', 'psu_bronze'], ['cool', 'cool_tower']], ['autograder']],
-  ['raid', 10, [['gpu', 'gpu_array'], ['cpu', 'cpu_v6'], ['psu', 'psu_gold'], ['cool', 'cool_aio']], ['drive', 'drive', 'drive', 'drive', 'drive']],
-  ['thesis', 13, [['gpu', 'gpu_lancet'], ['cpu', 'cpu_h8'], ['psu', 'psu_gold'], ['cool', 'cool_block']], ['thesis']],
-  ['hydra', 16, [['gpu', 'gpu_lancet2'], ['cpu', 'cpu_k8'], ['psu', 'psu_ti'], ['cool', 'cool_halo']], ['hydra', 'port', 'port', 'port']],
-  ['minima', 17, [['gpu', 'gpu_raster3'], ['cpu', 'cpu_k8'], ['psu', 'psu_over'], ['cool', 'cool_halo']], ['minima']],
-];
-
-for (const [name, lvl, gear, foes] of CASES) {
-  test(`battle runs: ${name}`, () => {
-    let wins = 0, turns = 0;
-    for (let i = 0; i < 30; i++) {
-      const { s, stats } = setup(lvl, gear);
-      const b = new Battle({ player: s, stats, enemies: foes, diff: DIFFICULTY[process.env.DIFF || 'standard'], items: { ramen: 3 } });
-      const r = autoplay(b);
-      if (r.result === 'win') wins++;
-      turns += r.turns;
+const MAIN = Object.keys(BOSSES).filter(k => k !== 'void');
+for (const k of MAIN) {
+  test(`boss ${k} (${DIFF}): a careful player wins, mashing attack does not`, () => {
+    const s = get(k), m = get(k, DIFF, masher);
+    console.log(`  ${k.padEnd(10)} smart ${s.wins}/${s.n} (${s.turns.toFixed(0)} turns, ${Math.round(s.hpLeft * 100)}% HP left)  masher ${m.wins}/${m.n}`);
+    if (DIFF === 'standard') {
+      assert.ok(s.wins >= 24, `${k}: smart player should usually win on Standard (${s.wins}/30)`);
+      assert.ok(s.turns >= 12, `${k}: fight is over too fast to use its mechanic (${s.turns.toFixed(1)} turns)`);
+      assert.ok(m.wins <= s.wins - 10, `${k}: mashing attack wins too often (${m.wins}/30 vs ${s.wins}/30)`);
     }
-    console.log(`  ${name}: win ${wins}/30, avg player turns ${(turns / 30).toFixed(1)}`);
-    assert.ok(turns > 0);
   });
 }
+
+test('difficulties are ordered for every boss', () => {
+  const order = ['pass', 'standard', 'honors', 'deans'];
+  for (const k of MAIN) {
+    const w = order.map(d => get(k, d).wins);
+    for (let i = 1; i < w.length; i++) assert.ok(w[i] <= w[i - 1] + 2, `${k}: ${order[i]} (${w[i]}) easier than ${order[i - 1]} (${w[i - 1]})`);
+    assert.equal(get(k, 'pass').wins, 30, `${k}: Pass/Fail must be a sure thing for a careful player`);
+  }
+});
+
+// Every roaming Glitch group, fought with the gear of the boss of its sector.
+const SECTOR_SPEC = { lobby: 'vendor', labs: 'autograder', servers: 'raid', archive: 'thesis', tunnels: 'hydra', core: 'minima', void: 'void' };
+test(`no roaming Glitch group is a wall (${DIFF})`, () => {
+  const walls = [];
+  for (const [id, r] of Object.entries(ROOMS)) for (const [m, e] of Object.entries(r.ents || {})) {
+    if (e.type !== 'enemy') continue;
+    const spec = { ...BOSSES[SECTOR_SPEC[r.sector]] };
+    let wins = 0;
+    for (let i = 0; i < 20; i++) {
+      const { s, stats } = setup(spec, DIFF);
+      const b = new Battle({ player: s, stats, enemies: e.group, diff: DIFFICULTY[DIFF], items: { ramen: 2 }, rng: rng(7000 + i) });
+      if (play(b, smart).result === 'win') wins++;
+    }
+    if (wins < (r.sector === 'void' ? (DIFF === 'deans' ? 4 : 12) : DIFF === 'deans' ? 10 : 18)) walls.push(`${id}:${m} [${e.group}] ${wins}/20`);
+  }
+  if (walls.length) console.log('  walls:', walls.join(', '));
+  assert.equal(walls.length, 0);
+});
 
 test('every enemy has valid moves for its ai', () => {
   for (const [k, e] of Object.entries(ENEMIES)) {

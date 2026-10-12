@@ -61,7 +61,7 @@ export default {
     ents: {
       G: { type: 'door', to: 'tun_junction', at: 'D' },
       1: { type: 'box', loot: { part: 'usb_turret' } },
-      2: { type: 'enemy', group: ['cablerat', 'cablerat', 'pingbat'] },
+      2: { type: 'enemy', group: ['cablerat', 'pingbat'] },
       3: { type: 'enemy', group: ['cablerat', 'steamhound'] },
       4: { type: 'note', id: 's5_cable' },
     },

@@ -63,7 +63,7 @@ export default {
       G: { type: 'door', to: 'r404_hall', at: 'G' },
       C: { type: 'note', id: 'v_last', tile: '=' },
       1: { type: 'enemy', group: ['segfault', 'segfault'] },
-      2: { type: 'enemy', group: ['missing', 'missing', 'segfault'] },
+      2: { type: 'enemy', group: ['missing', 'segfault'] },
       3: { type: 'box', loot: { part: 'cool_ln2' } },
     },
     flavor: { 'T': 'Every monitor shows the same thing: you, from behind, reading this.', '_': 'The whiteboard says: "DEMO DAY T-0h."', 'F': 'The couch is warm.' },

@@ -4,8 +4,8 @@ import { PARTS, PERK_IDS, perkCount, FORMS } from '../data/parts.js';
 export const DIFFICULTY = {
   pass:     { name: 'Pass/Fail', desc: 'Story first. Glitches hit softer and fold faster.', enemyDmg: 0.55, enemyHp: 0.75, xp: 1.3, heat: 0.8, spd: 0.95 },
   standard: { name: 'Standard', desc: 'The intended challenge. Builds matter.', enemyDmg: 1, enemyHp: 1, xp: 1, heat: 1, spd: 1 },
-  honors:   { name: 'Honors', desc: 'Tougher Glitches. Plan around intents.', enemyDmg: 1.2, enemyHp: 1.15, xp: 1, heat: 1.1, spd: 1.03 },
-  deans:    { name: "Dean's List", desc: 'Brutal. Every turn counts. For build nerds.', enemyDmg: 1.4, enemyHp: 1.35, xp: 0.9, heat: 1.15, spd: 1.08 },
+  honors:   { name: 'Honors', desc: 'Tougher Glitches. Plan around intents.', enemyDmg: 1.12, enemyHp: 1.1, xp: 1.05, heat: 1.1, spd: 1.03 },
+  deans:    { name: "Dean's List", desc: 'Brutal. Every turn counts. For build nerds.', enemyDmg: 1.25, enemyHp: 1.22, xp: 1, heat: 1.15, spd: 1.06 },
 };
 
 export const xpToNext = (L) => Math.floor(10 * Math.pow(L, 1.7));

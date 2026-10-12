@@ -9,7 +9,7 @@ import { APPS, ITEMS } from '../data/apps.js';
 // Stock unlocks by hour (state.hour).
 const STOCK = [
   { hour: 2, item: 'ramen' }, { hour: 2, item: 'volt' }, { hour: 2, item: 'paste' }, { hour: 2, item: 'gummy' },
-  { hour: 2, part: 'cool_tower', price: 90 }, { hour: 2, part: 'usb_mouse', price: 80 }, { hour: 2, app: 'firewall', price: 120 },
+  { hour: 2, part: 'cpu_k2', price: 70 }, { hour: 2, part: 'cool_tower', price: 90 }, { hour: 2, part: 'usb_mouse', price: 80 }, { hour: 2, app: 'firewall', price: 120 },
   { hour: 3, item: 'burrito' }, { hour: 3, item: 'tape' }, { hour: 3, app: 'cryo', price: 160 }, { hour: 3, part: 'psu_bronze', price: 140 }, { hour: 3, app: 'throttle', price: 180 },
   { hour: 4, item: 'coldbrew' }, { hour: 4, item: 'duster' }, { hour: 4, app: 'hotfix', price: 320 }, { hour: 4, part: 'ram_halc', price: 380 }, { hour: 4, part: 'usb_duck', price: 200 },
   { hour: 5, item: 'pizza' }, { hour: 5, app: 'exploit', price: 520 }, { hour: 5, part: 'cool_aio', price: 640 }, { hour: 5, app: 'gc', price: 480 },

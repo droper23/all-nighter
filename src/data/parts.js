@@ -14,11 +14,11 @@ export const SLOTS = {
 };
 
 export const FORMS = {
-  raster:   { name: 'Raster', desc: 'One clean shot. 100% ATK.', hits: 1, mult: 1.0, heat: 12, delay: 100, target: 'one' },
-  scatter:  { name: 'Scatter', desc: '3 shots at random foes, 50% each.', hits: 3, mult: 0.5, heat: 16, delay: 100, target: 'random' },
-  stream:   { name: 'Stream', desc: '5 rapid hits, 28% each. Runs hot.', hits: 5, mult: 0.28, heat: 24, delay: 85, target: 'one' },
-  raytrace: { name: 'Raytrace', desc: '200% shot. Pierces Encryption. Slow.', hits: 1, mult: 2.0, heat: 30, delay: 140, target: 'one', pierce: true },
-  batch:    { name: 'Batch', desc: 'Hits every foe for 65%.', hits: 1, mult: 0.65, heat: 20, delay: 115, target: 'all' },
+  raster:   { name: 'Raster', desc: 'One clean shot. 100% ATK.', hits: 1, mult: 1.0, heat: 18, delay: 100, target: 'one' },
+  scatter:  { name: 'Scatter', desc: '3 shots at random foes, 50% each.', hits: 3, mult: 0.5, heat: 22, delay: 100, target: 'random' },
+  stream:   { name: 'Stream', desc: '5 rapid hits, 28% each. Runs hot.', hits: 5, mult: 0.28, heat: 30, delay: 85, target: 'one' },
+  raytrace: { name: 'Raytrace', desc: '200% shot. Pierces Encryption. Slow.', hits: 1, mult: 2.0, heat: 38, delay: 140, target: 'one', pierce: true },
+  batch:    { name: 'Batch', desc: 'Hits every foe for 65%.', hits: 1, mult: 0.65, heat: 28, delay: 115, target: 'all' },
 };
 
 export const BRANDS = {

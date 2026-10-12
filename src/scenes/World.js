@@ -515,7 +515,9 @@ export class World extends Phaser.Scene {
     s.opened[ent.id] = true; ent.sprite.setFrame(1);
     const loot = ent.def.loot;
     this.giveReward(loot);
-    this.runScript([{ who: 'sys', text: this.rewardText(loot) }]);
+    const hint = loot.part && !s.flags.hint_install ? [{ who: 'dex', text: PARTS[loot.part].slot === 'gpu' ? 'NEW GPU. a GPU changes HOW u shoot, not just how hard. TAB, pick the GPU slot, Z to swap. try it on the next fight' : 'new part! TAB opens ur Build. pick the slot, Z to swap it in' }] : [];
+    if (hint.length) s.flags.hint_install = true;
+    this.runScript([{ who: 'sys', text: this.rewardText(loot) }, ...hint]);
   }
   pickTool(ent) {
     const d = ent.def;

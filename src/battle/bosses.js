@@ -8,6 +8,14 @@ function cycle(u, pattern, b) {
   return typeof key === 'function' ? key(b, u) : key;
 }
 function chargeFollow(u, key) { if (CHARGE_NEXT[key]) u.mem.force = CHARGE_NEXT[key]; }
+// MINIMA models the player's recent inputs: the most frequent of the last five (ties go to the latest).
+export function predictHabit(b) {
+  const r = b.memory.recent;
+  if (r.length < 3) return null;
+  const n = {}; let best = null;
+  r.forEach((k) => { n[k] = (n[k] || 0) + 1; if (!best || n[k] >= n[best]) best = k; });
+  return n[best] >= 2 ? best : null;
+}
 
 export const BOSS_AI = {
   vendor: {
@@ -23,7 +31,11 @@ export const BOSS_AI = {
       }
       return null;
     },
-    after(b, u, key) { chargeFollow(u, key); return null; },
+    after(b, u, key) {
+      chargeFollow(u, key);
+      if (key === 'dispense') return [{ t: 'log', text: 'VENDOR rocks back on its legs. It is TILTED!' }, b.addStatus(u, 'tilted', 2)];
+      return null;
+    },
   },
 
   autograder: {
@@ -39,6 +51,8 @@ export const BOSS_AI = {
       const drives = b.units.filter(x => x.key === 'drive');
       const dead = drives.filter(x => !x.alive).length;
       const claimed = drives.some(x => x.alive && x !== u && x.intent && x.intent.key === 'rebuild');
+      if (u.mem.rebuilding && !b.raidDegraded && dead >= 1) return 'rebuild';
+      u.mem.rebuilding = 0;
       if (!b.raidDegraded && dead === 1 && !claimed) return 'rebuild';
       if (b.raidDegraded) return b.rng() < 0.5 ? 'seek' : 'spin';
       return cycle(u, ['spin', 'seek', 'spin', 'click'], b);
@@ -46,8 +60,10 @@ export const BOSS_AI = {
     after(b, u, key) {
       if (key !== 'rebuild') return null;
       const dead = b.units.find(x => x.key === 'drive' && !x.alive);
-      if (b.raidDegraded || !dead) return [{ t: 'log', text: 'Nothing to rebuild.' }];
-      dead.alive = true; dead.hp = Math.round(dead.maxHp * 0.6); dead.statuses = {}; dead.shield = 0;
+      if (b.raidDegraded || !dead) { u.mem.rebuilding = 0; return [{ t: 'log', text: 'Nothing to rebuild.' }]; }
+      if (!u.mem.rebuilding) { u.mem.rebuilding = 1; return [{ t: 'log', text: 'PARITY REBUILD 50%... Kill another drive before it finishes!' }]; }
+      u.mem.rebuilding = 0;
+      dead.alive = true; dead.hp = Math.round(dead.maxHp * 0.8); dead.statuses = {}; dead.shield = 0;
       dead.next = u.next + b.delayFor(dead, 80); b.chooseIntent(dead);
       return [{ t: 'revive', u: dead, text: 'Parity rebuilt a drive!' }];
     },
@@ -57,7 +73,7 @@ export const BOSS_AI = {
     choose(b, u) {
       const heal = () => (u.hp < u.maxHp * 0.6 ? 'revise' : 'lit');
       const write = () => (b.enemies.filter(e => e.key === 'chapter').length < 3 ? 'write' : 'lit');
-      return cycle(u, [write, 'lit', 'defend', write, heal], b);
+      return cycle(u, [write, 'lit', 'defend', 'lit', heal], b);
     },
     after(b, u, key) { chargeFollow(u, key); return null; },
   },
@@ -65,8 +81,10 @@ export const BOSS_AI = {
   hydra: {
     choose(b, u) {
       const ports = b.enemies.filter(e => e.key === 'port').length;
+      // every live Port widens the flood
+      u.data = { ...u.data, moves: { ...u.data.moves, flood: { ...u.data.moves.flood, pow: 0.4 + 0.22 * ports } } };
       const reroute = () => (ports < 3 ? 'reroute' : 'flood');
-      return cycle(u, ['flood', 'handshake', 'flood', reroute], b);
+      return cycle(u, ['flood', 'handshake', 'flood', 'flood', reroute, 'handshake'], b);
     },
     before(b, u) {
       const ports = b.enemies.filter(e => e.key === 'port').length;
@@ -76,10 +94,17 @@ export const BOSS_AI = {
       }
       return null;
     },
+    after(b, u, key) {
+      if (key !== 'reroute') return null;
+      const p = b.units.filter(x => x.key === 'port' && x.alive).pop();
+      if (p && p.hp === p.maxHp) p.hp = Math.round(p.maxHp * 0.7);
+      return null;
+    },
   },
 
   minima: {
     choose(b, u) {
+      u.mem.predict = predictHabit(b);
       const spawn = () => (b.enemies.length < 3 ? 'spawn' : 'epoch');
       const pats = [
         ['descent', 'epoch', 'overfit', 'backprop', 'epoch'],

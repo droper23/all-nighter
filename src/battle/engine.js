@@ -19,12 +19,20 @@ export const STATUS_INFO = {
   sudo: { name: 'sudo', short: 'SU', color: '#5ee0e8', desc: 'Next action: no Heat, auto-crit.' },
   backup: { name: 'Backup', short: 'BAK', color: '#5cc070', desc: 'Revives once at 40%.' },
   cited: { name: 'Cited', short: 'CIT', color: '#dcb07a', desc: 'Takes half damage while Chapters stand.' },
+  tilted: { name: 'Tilted', short: 'TLT', color: '#f08a3c', desc: 'Off balance: takes 50% more damage.' },
 };
+// Weakness hits: x1.25 before a species is Probed, x1.6 once its weak points are known.
+export const WEAK_UNKNOWN = 1.25, WEAK_KNOWN = 1.6;
+// Heat at or above this fraction of the cap counts as Running Hot (+15% damage).
+export const HOT_AT = 0.5, HOT_BONUS = 1.15;
+// Patch heals less each time it is used in one battle.
+export const patchPct = (n) => Math.max(0.15, 0.35 * Math.pow(0.78, n));
 
 export class Battle {
-  constructor({ player, stats, enemies, diff, preempt = null, rng = Math.random, items = {}, boss = false, canFlee = true }) {
+  constructor({ player, stats, enemies, diff, preempt = null, rng = Math.random, items = {}, boss = false, canFlee = true, known = null, mods = null }) {
     this.rng = rng; this.diff = diff; this.stats = stats; this.items = items; this.boss = boss; this.canFlee = canFlee && !boss;
-    this.units = []; this.turn = 0; this.log = []; this.memory = { forms: {}, lastAction: null, actions: {} };
+    this.known = known || new Set(); this.mods = mods || {};
+    this.units = []; this.turn = 0; this.log = []; this.memory = { forms: {}, lastAction: null, actions: {}, recent: [], patches: 0 };
     this.uid = 0;
     const p = this.addUnit({
       side: 'player', kind: 'player', name: 'Jules', sprite: 'jules', hp: Math.min(player.hp, stats.maxHp), maxHp: stats.maxHp,
@@ -54,7 +62,7 @@ export class Battle {
   }
   addEnemy(key) {
     const e = ENEMIES[key];
-    const hp = Math.round(e.hp * this.diff.enemyHp);
+    const hp = Math.round(e.hp * this.diff.enemyHp * (this.mods.enemyHp || 1));
     return this.addUnit({ side: 'enemy', kind: 'enemy', key, def: e.def, name: e.name, sprite: e.sprite, hp, maxHp: hp, atk: e.atk, spd: e.spd * this.diff.spd, crit: 5, data: e, step: 0, boss: !!e.boss, mem: {} });
   }
   addDrone(key) {
@@ -66,6 +74,9 @@ export class Battle {
   get enemies() { return this.units.filter(u => u.side === 'enemy' && u.alive); }
   get allies() { return this.units.filter(u => u.side === 'player' && u.alive); }
   has(u, s) { return !!u.statuses[s]; }
+  knows(u) { return !!u.probed || this.known.has(u.key); }
+  isHot() { const p = this.player; return p && p.heat >= p.heatCap * HOT_AT; }
+  learn(u) { u.probed = true; this.known.add(u.key); }
 
   effSpd(u) { return u.spd * (this.has(u, 'overclocked') ? 1.4 : 1); }
   delayFor(u, d) { return d * 100 / Math.max(10, this.effSpd(u)); }
@@ -109,9 +120,9 @@ export class Battle {
     if (u.kind === 'player' && u.alive) {
       if (this.stats.passives.has('cactus')) ev.push(this.heal(u, Math.round(u.maxHp * 0.04)));
       if (this.stats.passives.has('thermos')) ev.push(this.heal(u, Math.round(u.maxHp * 0.05)));
-      const shed = Math.min(u.heat, this.stats.cool);
+      const shed = Math.min(u.heat, this.stats.cool * (this.mods.cool || 1));
       u.heat -= shed;
-      const gain = Math.min(u.maxPwr - u.pwr, this.stats.regen);
+      const gain = Math.max(0, Math.min(u.maxPwr - u.pwr, this.mods.regen != null ? this.mods.regen : this.stats.regen));
       u.pwr += gain;
       if (shed || gain) ev.push({ t: 'tick', u, shed, gain });
       u.hpHist.push(u.hp); if (u.hpHist.length > 3) u.hpHist.shift();
@@ -138,21 +149,24 @@ export class Battle {
     if (this.has(src, 'amped')) a *= 1.3;
     if (src.kind === 'player') {
       const heat = src.heat;
+      if (this.isHot()) a *= HOT_BONUS;
       if ((this.stats.brands.vortex || 0) >= 2 && heat > 50) a *= 1.15;
       if (this.stats.passives.has('mug') && heat > 50) a *= 1.2;
       a *= 1 + 0.1 * (this.stats.perks.overvolt || 0);
     }
-    if (src.side === 'enemy') a *= this.diff.enemyDmg;
+    if (src.side === 'enemy') a *= this.diff.enemyDmg * (this.mods.enemyDmg || 1);
     return a;
   }
   calc(src, tgt, mult, { form = null, crit = 0, noRand = false } = {}) {
     let dmg = this.attackPower(src) * mult;
     let weak = false, resist = false;
-    if (form && tgt.data && tgt.data.weak && tgt.data.weak.includes(form)) { dmg *= 1.5; weak = true; }
+    if (form && tgt.data && tgt.data.weak && tgt.data.weak.includes(form)) { dmg *= this.knows(tgt) ? WEAK_KNOWN : WEAK_UNKNOWN; weak = true; }
     if (form && tgt.data && tgt.data.resist && tgt.data.resist.includes(form)) { dmg *= 0.5; resist = true; }
     if (form && tgt.mem && tgt.mem.learned === form) { dmg *= 0.65; resist = true; }
     if (this.has(tgt, 'exposed')) dmg *= 1.3;
     if (this.has(tgt, 'vulnerable')) dmg *= 1.5;
+    if (this.has(tgt, 'tilted')) dmg *= 1.5;
+    if (src.kind === 'player' && this.predicted) dmg *= 0.5;
     if (this.has(tgt, 'guarding')) dmg *= 0.5;
     if (this.has(tgt, 'cited')) dmg *= 0.5;
     dmg *= 50 / (50 + tgt.def);
@@ -224,7 +238,7 @@ export class Battle {
 
   // ---------- player ----------
   heatMul() {
-    let m = this.diff.heat;
+    let m = this.diff.heat * (this.mods.heat || 1);
     if (this.has(this.player, 'overclocked')) m *= 1.5;
     m *= 1 - 0.1 * (this.stats.perks.chilled || 0);
     m *= 1 + 0.1 * (this.stats.perks.overvolt || 0);
@@ -235,7 +249,7 @@ export class Battle {
     if (this.has(p, 'sudo') && h > 0) { delete p.statuses.sudo; return ev; }
     p.heat = Math.max(0, p.heat + (h > 0 ? h * this.heatMul() : h));
     if (p.heat >= p.heatCap) {
-      p.heat = 35; p.stunned = true;
+      p.heat = Math.round(p.heatCap * 0.35); p.stunned = true;
       this.addStatus(p, 'vulnerable', 2);
       ev.push({ t: 'overheat', u: p });
     }
@@ -257,10 +271,23 @@ export class Battle {
     if (grader && this.memory.lastAction === key && a.type !== 'item') {
       ev.push({ t: 'log', text: 'PLAGIARISM DETECTED. -10 points.' });
       ev.push(this.addStatus(p, 'exposed', 2));
-      ev.push(...this.hit(grader, p, 0.6));
+      ev.push(...this.hit(grader, p, 0.9));
+      ev.push(...this.addHeat(15));
+    }
+    this.predicted = false;
+    const minima = this.enemies.find(e => e.data.ai === 'minima');
+    if (minima && minima.mem.predict && a.type !== 'item' && a.type !== 'flee') {
+      if (minima.mem.predict === key) {
+        this.predicted = true;
+        ev.push({ t: 'predict', u: minima, hit: true, text: `PREDICTED: ${actionName(key)}. MINIMA was ready for it.` });
+      } else {
+        ev.push({ t: 'predict', u: minima, hit: false, text: 'Unexpected input. MINIMA\'s loss spikes!' });
+        ev.push(this.addStatus(minima, 'exposed', 1));
+      }
     }
     this.memory.lastAction = key;
     this.memory.actions[key] = (this.memory.actions[key] || 0) + 1;
+    if (a.type !== 'item') { this.memory.recent.push(key); if (this.memory.recent.length > 5) this.memory.recent.shift(); }
     let delay = 100;
     if (a.type === 'attack') {
       const f = this.stats.formDef;
@@ -305,6 +332,8 @@ export class Battle {
       if (this.rng() < ch) { ev.push({ t: 'flee', ok: true }); this.fled = true; return ev; }
       ev.push({ t: 'flee', ok: false, text: "Couldn't get away!" });
     }
+    if (this.predicted && minima && minima.alive && p.alive) { ev.push({ t: 'log', text: 'MINIMA counters.' }); ev.push(...this.hit(minima, p, 0.6)); }
+    this.predicted = false;
     this.endTurn(p, delay);
     return ev.filter(Boolean);
   }
@@ -313,9 +342,9 @@ export class Battle {
     const p = this.player, ev = [], S = this.stats;
     const target = tgt && tgt.alive ? tgt : this.enemies[0];
     switch (id) {
-      case 'patch': ev.push(this.heal(p, Math.round(p.maxHp * 0.35))); break;
+      case 'patch': ev.push(this.heal(p, Math.round(p.maxHp * patchPct(this.memory.patches++)))); break;
       case 'firewall': p.shield = Math.max(p.shield, Math.round(p.maxHp * 0.3)); ev.push({ t: 'shield', u: p, amt: p.shield }); break;
-      case 'probe': if (target) { target.probed = true; ev.push(this.addStatus(target, 'marked', 3)); ev.push({ t: 'probe', u: target }); } break;
+      case 'probe': if (target) { this.learn(target); ev.push(this.addStatus(target, 'marked', 3)); ev.push({ t: 'probe', u: target }); } break;
       case 'throttle': ev.push(this.addStatus(target, 'throttled', 3)); break;
       case 'lagspike': ev.push(...this.hit(p, target, 0.5)); ev.push(this.addStatus(target, 'lag', 2)); break;
       case 'overclock': ev.push(this.addStatus(p, 'overclocked', 3)); break;
@@ -373,7 +402,7 @@ export class Battle {
     if (!foes.length) return ev;
     if (d.key === 'cam' && !d.acted) {
       const t = foes.find(e => !e.probed) || foes[0];
-      t.probed = true; ev.push(this.addStatus(t, 'marked', 3)); ev.push({ t: 'probe', u: t });
+      this.learn(t); ev.push(this.addStatus(t, 'marked', 3)); ev.push({ t: 'probe', u: t });
       ev.push({ t: 'log', text: 'Webcam Drone scans ' + t.name + '.' });
     } else {
       const t = this.pickRandom(foes);
@@ -403,6 +432,7 @@ export class Battle {
   // Intent label for UI, with rough damage numbers.
   intentLabel(u) {
     if (!u.intent) return '';
+    if (u.intent.move.kind === 'charge') return '';
     const m = u.intent.move, p = this.player;
     const est = (pow) => this.calc(u, p, pow, { noRand: true }).dmg;
     switch (m.kind) {
@@ -439,6 +469,11 @@ export class Battle {
       if (sid === 'random') sid = this.pickRandom(['throttled', 'exposed', 'glitched', 'lag']);
       ev.push(this.addStatus(t, sid, turns, sid === 'glitched' ? { val: Math.max(1, Math.round(u.atk * 0.45 * this.diff.enemyDmg)) } : {}));
     };
+    if (m.heat) {
+      const p = this.player;
+      if (m.heat > 0) { ev.push({ t: 'log', text: `${u.name} heats up your Build! (+${m.heat} Heat)` }); ev.push(...this.addHeat(m.heat)); }
+      else { p.heat = Math.max(0, p.heat + m.heat); ev.push({ t: 'vent', u: p, amt: -m.heat }); }
+    }
     switch (m.kind) {
       case 'atk': case 'drain': { const t = targets(); for (let i = 0; i < m.hits; i++) ev.push(...this.hit(u, t, m.pow)); statusTo(t); if (m.drain && t.kind === 'player') { t.pwr = Math.max(0, t.pwr - m.drain); ev.push({ t: 'log', text: `Drained ${m.drain} Power!` }); } break; }
       case 'multi': { for (let i = 0; i < m.hits; i++) { const t = targets(); ev.push(...this.hit(u, t, m.pow)); } break; }
@@ -469,7 +504,12 @@ export class Battle {
     const deadCount = drives.filter(x => !x.alive).length;
     if (deadCount >= 2 && !this.raidDegraded) {
       this.raidDegraded = true;
+      drives.filter(x => x.alive && x.intent && x.intent.key === 'rebuild').forEach(x => this.chooseIntent(x));
       ev.push({ t: 'log', text: 'ARRAY DEGRADED. Parity lost. No more rebuilds!' });
+    } else if (deadCount === 1 && !this.raidDegraded) {
+      // The next drive in line drops everything to rebuild parity.
+      const next = drives.filter(x => x.alive).sort((x, y) => x.next - y.next)[0];
+      if (next) { next.mem.rebuilding = 0; next.intent = { key: 'rebuild', move: next.data.moves.rebuild }; ev.push({ t: 'log', text: `${next.name} begins a parity rebuild. Kill another drive first!` }); }
     }
   }
 
@@ -482,4 +522,9 @@ export class Battle {
   }
 }
 
+export const ACTION_NAMES = { attack: 'Attack', guard: 'Guard', vent: 'Vent', item: 'Item', flee: 'Flee' };
+export function actionName(key) {
+  if (key.startsWith('app:')) return APPS[key.slice(4)] ? APPS[key.slice(4)].name : key.slice(4);
+  return ACTION_NAMES[key] || key;
+}
 export { DEBUFFS, BUFFS };
