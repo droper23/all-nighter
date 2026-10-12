@@ -15,8 +15,9 @@ export function rng(seed) {
 // Gear a player realistically has when they reach each boss without grinding:
 // guaranteed boxes and rewards up to that point, sensible shop buys and modest Bench upgrades.
 export const BOSSES = {
-  vendor: { level: 3, foes: ['vendor'], gear: { gpu: 'gpu_hose', cpu: 'cpu_k2', psu: 'psu_brick', cool: 'cool_stock', usb: ['usb_fan'] }, apps: ['patch', 'probe'], items: { ramen: 4, volt: 1, paste: 1 } },
-  autograder: { level: 5, foes: ['autograder'], gear: { gpu: 'gpu_hose', cpu: 'cpu_k2', psu: 'psu_brick', cool: 'cool_tower', usb: ['usb_fan', 'usb_duck'], ram: ['ram_vort'] }, apps: ['patch', 'throttle'], items: { ramen: 4, burrito: 1, paste: 1 } },
+  // Sectors 1-2 use only guaranteed gear (no shop buys): the floor a new player can be at.
+  vendor: { level: 3, foes: ['vendor'], gear: { gpu: 'gpu_hose', cpu: 'cpu_celery', psu: 'psu_brick', cool: 'cool_stock', usb: ['usb_fan'] }, apps: ['patch', 'probe'], items: { ramen: 4, volt: 1, paste: 1 } },
+  autograder: { level: 5, foes: ['autograder'], gear: { gpu: 'gpu_hose', cpu: 'cpu_celery', psu: 'psu_brick', cool: 'cool_stock', usb: ['usb_fan', 'usb_duck'], ram: ['ram_vort'] }, apps: ['patch', 'throttle'], items: { ramen: 2, paste: 1 } },
   raid: { level: 8, foes: ['drive', 'drive', 'drive', 'drive', 'drive'], gear: { gpu: ['gpu_lancet', 1], cpu: ['cpu_k2', 1], psu: 'psu_gold', cool: 'cool_slip', usb: ['usb_key', 'usb_fan'], ram: ['ram_vort'] }, apps: ['patch', 'probe', 'glitch'], items: { burrito: 2, ramen: 2, coldbrew: 1 } },
   thesis: { level: 10, foes: ['thesis'], gear: { gpu: ['gpu_lancet', 2], cpu: ['cpu_k2', 2], psu: 'psu_gold', cool: 'cool_aio', usb: ['usb_key', 'usb_fan'], ram: ['ram_core', 'ram_vort'] }, apps: ['patch', 'probe', 'glitch'], items: { burrito: 2, pizza: 1, tape: 1 } },
   hydra: { level: 13, foes: ['hydra', 'port', 'port', 'port'], gear: { gpu: ['gpu_lancet', 3], cpu: ['cpu_k2', 3], psu: 'psu_over', cool: 'cool_halo', usb: ['usb_key', 'usb_turret'], ram: ['ram_core', 'ram_vort', 'ram_halc'] }, apps: ['patch', 'probe', 'exploit', 'decompile'], items: { pizza: 2, burrito: 2 } },

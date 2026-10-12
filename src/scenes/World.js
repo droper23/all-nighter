@@ -250,7 +250,6 @@ export class World extends Phaser.Scene {
   // ---------------- update ----------------
   update(time, delta) {
     const s = G.state;
-    s.playtime += delta / 1000;
     s.minutes = (s.minutes || 0) + delta / 60000 * 2;
     this.minuteT += delta; if (this.minuteT > 5000) { this.minuteT = 0; this.refreshHud(); }
     if (this.dark) {
@@ -656,7 +655,10 @@ export class World extends Phaser.Scene {
     // respawn enemies in this room
     this.ents.filter(e => e.type === 'enemy').forEach(e => e.sprite && e.sprite.destroy());
     this.ents = this.ents.filter(e => e.type !== 'enemy');
-    for (const [m, def] of Object.entries(this.room.ents || {})) if (def.type === 'enemy' && this.markers[m]) this.spawnEnt(m, def, this.markers[m].x, this.markers[m].y);
+    for (const [m, def] of Object.entries(this.room.ents || {})) if (def.type === 'enemy' && this.markers[m]) {
+      const e = this.spawnEnt(m, def, this.markers[m].x, this.markers[m].y);
+      if (e) e.stun = 4000; // grace period: don't ambush someone who just plugged in
+    }
   }
   fastTravel(list, done) {
     this.dialogue.queue.unshift({ choice: [...list.map(o => ({ label: o.name, then: [{ call: (sc) => sc.travelTo(o) }] })), { label: 'Cancel', then: [] }] });

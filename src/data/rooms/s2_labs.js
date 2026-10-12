@@ -121,7 +121,7 @@ export default {
       E: { type: 'door', to: 'maker', at: 'A' },
       1: { type: 'sleeper', look: 'student1', script: 'sleep_lec1' },
       3: { type: 'sleeper', look: 'student5', script: 'sleep_lec2' },
-      2: { type: 'enemy', group: ['oscillo', 'printhead'] },
+      2: { type: 'enemy', group: ['oscillo', 'crawler'] },
       4: { type: 'note', id: 's2_syllabus' },
     },
     flavor: { '_': 'The giant chalkboard is covered, edge to edge, in one equation: argmin over all students of "noise". Someone wrote "SEE ME" underneath. In chalk. From the inside.', 'h': ['Lecture seats. One has gum from the 1990s, now a geological feature.', 'A seat with a tiny engraved plaque: "In memory of H.V. — he always sat in the front."'], '=': 'The lectern. A remote clicker blinks: "SLIDE 1 OF ∞".', ',': 'The stage carpet. It is worn into a path from the lectern to the exit.' },

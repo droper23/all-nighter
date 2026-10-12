@@ -21,6 +21,8 @@ const game = new Phaser.Game({
   scene: [Boot, Title, World, Battle, Menu, Shop, Bench, Ending],
 });
 window.__game = game;
+// Play time counts every scene (battles, menus, shops), not just walking around. Capped so a sleeping tab doesn't add hours.
+game.events.on('step', (time, delta) => { if (G.state && !game.scene.isActive('Title') && !game.scene.isActive('Ending')) G.state.playtime += Math.min(delta, 250) / 1000; });
 window.__G = G;
 
 // Developer helpers (only with ?dev in the URL).

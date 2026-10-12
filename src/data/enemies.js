@@ -16,11 +16,11 @@ export const ENEMIES = {
   dustbun: { name: 'Dustbunny', sprite: 'dustbun', hp: 30, atk: 9, def: 4, spd: 105, xp: 8, flex: 6, weak: ['raytrace'], resist: [],
     desc: 'A robot vacuum with a map of the building and nowhere to be.',
     moves: { ram: M('Ram', 'atk', { pow: 1.1 }), suck: M('Vacuum', 'drain', { pow: 0.4, drain: 6 }) }, ai: { rand: { ram: 3, suck: 2 } } },
-  vendor: { name: 'VENDOR', sprite: 'vendor', boss: true, hp: 230, atk: 10, def: 4, spd: 85, xp: 90, flex: 150, weak: ['stream'], resist: ['scatter'],
+  vendor: { name: 'VENDOR', sprite: 'vendor', boss: true, hp: 200, atk: 10, def: 4, spd: 85, xp: 90, flex: 150, weak: ['stream'], resist: ['scatter'],
     desc: 'The lobby vending machine. Exact change only. Guard its Dispense, then punish it while it is Tilted. Its glowing display heats your Build.',
     moves: {
       barrage: M('Can Barrage', 'multi', { pow: 0.42, hits: 4 }), exact: M('EXACT CHANGE ONLY', 'charge', { delay: 70 }),
-      dispense: M('Dispense', 'atk', { pow: 3.2 }), restock: M('Restock', 'summon', { summon: 'fizzbit' }),
+      dispense: M('Dispense', 'atk', { pow: 3.0 }), restock: M('Restock', 'summon', { summon: 'fizzbit' }),
       coin: M('Coin Return', 'shield', { shield: 25 }), glow: M('Display Glow', 'debuff', { pow: 0.3, status: ['throttled', 2], heat: 20 }),
     }, ai: 'vendor' },
 
@@ -39,7 +39,7 @@ export const ENEMIES = {
     moves: { extrude: M('Extrude Benchy', 'summon', { summon: 'benchy' }), nozzle: M('Nozzle Jab', 'atk', { pow: 1.4 }) }, ai: ['extrude', 'nozzle', 'nozzle'] },
   benchy: { name: 'Benchy', sprite: 'benchy', hp: 16, atk: 8, def: 2, spd: 90, xp: 3, flex: 1, weak: [], resist: [], minion: true,
     desc: 'A calibration boat. It sails on desk.', moves: { ram: M('Tiny Ram', 'atk') }, ai: ['ram'] },
-  autograder: { name: 'THE AUTOGRADER', sprite: 'autograder', boss: true, hp: 330, atk: 15, def: 7, spd: 92, xp: 220, flex: 300, weak: ['stream'], resist: ['raster'],
+  autograder: { name: 'THE AUTOGRADER', sprite: 'autograder', boss: true, hp: 300, atk: 15, def: 7, spd: 92, xp: 220, flex: 300, weak: ['stream'], resist: ['raster'],
     desc: 'Runs every submission against hidden tests. Punishes repetition: never use the same action twice in a row.',
     moves: {
       redpen: M('Red Pen', 'multi', { pow: 0.45, hits: 3 }), deadline: M('Deadline Approaching', 'charge', { delay: 70 }),
