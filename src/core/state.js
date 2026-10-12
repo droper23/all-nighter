@@ -24,7 +24,7 @@ export function makePart(id, { plus = 0, perks = null } = {}) {
 export function newGame(difficulty = 'standard') {
   const s = {
     version: 1, difficulty, playtime: 0, created: Date.now(),
-    room: 'dorm_desk', x: null, y: null, facing: 'down',
+    room: 'studio', x: null, y: null, facing: 'down',
     level: 1, xp: 0, hp: 50, flex: 20,
     parts: [], apps: ['patch', 'probe'], items: { ramen: 3, volt: 1 }, mats: { scrap: 0, silicon: 0 },
     build: { cpu: null, gpu: null, ram: [null, null], ramApps: ['patch', 'probe'], psu: null, cool: null, usb: [null, null] },

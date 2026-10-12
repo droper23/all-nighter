@@ -277,7 +277,9 @@ export class Menu extends Phaser.Scene {
     if (!items.length) { audio.sfx('error'); return; }
     const pg = panel(this, 298, 6, 176, 110).setDepth(200);
     const tt = text(this, 306, 12, title, C.accent).setDepth(201);
-    const close = () => { pg.destroy(); tt.destroy(); this.list2 && this.list2.destroy(); this.list2 = null; if (this.descObj) { this.descObj.destroy(); this.descObj = null; } };
+    const hidden = (this.infoObjs || []).slice(1).filter(o => o.y < 120 && o.setVisible);
+    hidden.forEach(o => o.setVisible(false));
+    const close = () => { hidden.forEach(o => o.active && o.setVisible(true)); pg.destroy(); tt.destroy(); this.list2 && this.list2.destroy(); this.list2 = null; if (this.descObj) { this.descObj.destroy(); this.descObj = null; } };
     this.list2 = new ListMenu(this, 304, 26, 166, items, {
       rows: 8, lineH: 11, depth: 202,
       onSelect: (it) => { close(); onPick(it); },
