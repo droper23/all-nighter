@@ -1,3 +1,4 @@
+import { actionName } from './engine.js';
 // Boss scripts: choose(battle, unit) -> move key; optional before()/after() hooks return extra events.
 const CHARGE_NEXT = { exact: 'dispense', deadline: 'late', defend: 'committee', overfit: 'predict', thesis: 'tenure' };
 
@@ -123,7 +124,9 @@ export const BOSS_AI = {
         ev.push({ t: 'log', text: `MINIMA now resists ${u.mem.learned}.` });
       } else if (u.mem.phase === 1 && u.hp < u.maxHp * 0.33) {
         u.mem.phase = 2; u.mem.i = 0; u.spd *= 1.15;
-        ev.push({ t: 'phase', u, text: 'MINIMA: Loss approaching zero. Please hold still.' });
+        const all = Object.entries((b.habits && b.habits.actions) || {}).sort((x, y) => y[1] - x[1])[0];
+        const habit = all ? `${actionName(all[0]).toUpperCase()}: ${all[1]} times tonight. ` : '';
+        ev.push({ t: 'phase', u, text: `MINIMA: ${habit}I know what you do when you are tired. Loss approaching zero. Please hold still.` });
         ev.push(b.addStatus(u, 'amped', 99));
       }
       return ev.length ? ev : null;

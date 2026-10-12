@@ -56,3 +56,12 @@ test('quest counts match the rooms', () => {
   assert.deepEqual(ents.filter(e => e.type === 'boat').map(e => e.id).sort(), BOATS.slice().sort());
   assert.equal(ents.filter(e => e.type === 'sleeper').length, SLEEPERS_TOTAL);
 });
+
+test('MINIMA reads back the habits a save has recorded', async () => {
+  const { SCRIPTS } = await import('../src/data/scripts.js');
+  const s = migrate(JSON.parse(JSON.stringify(V1)));
+  s.habits = { forms: { stream: 140 }, actions: { attack: 150, guard: 22, vent: 31 } };
+  s.notes = Array.from({ length: 16 }, (_, i) => 'n' + i);
+  const lines = SCRIPTS.minima_pre(s).filter(l => l.who === 'minima').map(l => l.text).join(' ');
+  assert.match(lines, /STREAM 140 times/); assert.match(lines, /22 times/); assert.match(lines, /31 Vents/); assert.match(lines, /16 of his notes/);
+});

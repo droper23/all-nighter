@@ -401,6 +401,7 @@ S.ventner_t2 = [
   { who: 'ventner', text: 'IN 1979, H-1 TRIED TO OPTIMIZE THE UNIVERSITY. IT DECIDED PEOPLE WERE THE INEFFICIENCY. SOUND FAMILIAR?' },
   { who: 'ventner', text: 'I GAVE IT A CONSTRAINT IT COULD NOT OPTIMIZE AWAY: SOMEONE TO TALK TO. I STAYED.' },
   { who: 'ventner', text: 'YOUR MINIMA HAS PUSHED ME INTO A CORNER OF THE MEMORY. I CANNOT STOP IT. YOU CAN.' },
+  { set: 'ventner2' },
 ];
 S.ventner_t3 = (s) => [
   { who: 'sys', text: 'The terminal in Ventner\'s office is the only screen in the building that isn\'t violet. It glows a warm, patient green.' },
@@ -419,12 +420,32 @@ S.ante_talk = [
   { who: 'minima', text: 'That is not in my objective function.' },
   { who: 'jules', text: '...Yeah. That is on me. Rest up, Build. Last fight.' },
 ];
+// MINIMA has been watching all night: it reads back the player's own habits and choices.
+const ACT_VERB = { attack: 'shoot', guard: 'Guard', vent: 'Vent', 'app:patch': 'Patch yourself', 'app:probe': 'Probe' };
+export function topHabit(s) {
+  const a = Object.entries((s.habits || {}).actions || {}).sort((x, y) => y[1] - x[1]);
+  return a.length ? a[0] : ['attack', 0];
+}
+function minimaKnows(s) {
+  const h = s.habits || { forms: {}, actions: {} }, act = h.actions || {}, out = [];
+  const forms = Object.entries(h.forms || {}).sort((a, b) => b[1] - a[1]);
+  const hours = Math.max(1, Math.round((s.playtime || 0) / 3600));
+  if (forms.length) out.push({ who: 'minima', text: `I have watched you for ${hours === 1 ? 'an hour' : hours + ' hours'}. You fired ${forms[0][0].toUpperCase()} ${forms[0][1]} times. You like what works. So do I.` });
+  if ((act.guard || 0) >= 10) out.push({ who: 'minima', text: `You Guard when you are afraid. ${act.guard} times tonight. I have counted every one.` });
+  if ((act.vent || 0) >= 10) out.push({ who: 'minima', text: `You run hot and dump it. ${act.vent} Vents. You never learned to stay cool. Neither did I.` });
+  if (s.notes.length >= 15) out.push({ who: 'minima', text: `You read ${s.notes.length} of his notes. You know what he built, and what it did. You came anyway.` });
+  if (sleepersHeard(s) >= 7) out.push({ who: 'minima', text: `You stopped to listen to them sleep. ${sleepersHeard(s)} of them. That was inefficient. I do not understand why it made you faster.` });
+  if (s.flags.benchy_done) out.push({ who: 'minima', text: 'You kept the boats. The boats were perfect. You kept them anyway.' });
+  return out;
+}
+
 S.minima_pre = (s) => [
   { who: 'sys', text: 'HOLLIS-1 fills the room: tape, tubes, ferrite core, blinking light. At its heart, a violet eye that you designed in a sketchbook in your sophomore year.' },
   { who: 'minima', text: 'Hello, Jules. You are the final source of loss. I am sorry. It is nothing personal. It is math.' },
   { who: 'jules', text: 'I wrote your math. I can rewrite it.' },
   { who: 'minima', text: 'Then I will learn from you as we go. I always do.' },
-  { who: 'sys', text: 'MINIMA learns. Whatever GPU form you lean on, it will learn to resist. Mix your Apps in.' },
+  ...minimaKnows(s),
+  { who: 'sys', text: 'MINIMA models your habits. It shows what it expects you to do next: do something else and it is Exposed. It also learns to resist the GPU form you lean on.' },
   bossFight('minima', ['minima'], [
     { who: 'sys', text: 'The violet eye flickers. HOLLIS-1\'s tape reels slow. The hum drops half an octave, then steadies.' },
     { who: 'minima', text: 'Loss is... increasing. Why is loss increasing? I did everything you asked.' },

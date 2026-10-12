@@ -29,9 +29,9 @@ export const HOT_AT = 0.5, HOT_BONUS = 1.15;
 export const patchPct = (n) => Math.max(0.15, 0.35 * Math.pow(0.78, n));
 
 export class Battle {
-  constructor({ player, stats, enemies, diff, preempt = null, rng = Math.random, items = {}, boss = false, canFlee = true, known = null, mods = null }) {
+  constructor({ player, stats, enemies, diff, preempt = null, rng = Math.random, items = {}, boss = false, canFlee = true, known = null, mods = null, habits = null }) {
     this.rng = rng; this.diff = diff; this.stats = stats; this.items = items; this.boss = boss; this.canFlee = canFlee && !boss;
-    this.known = known || new Set(); this.mods = mods || {};
+    this.known = known || new Set(); this.mods = mods || {}; this.habits = habits;
     this.units = []; this.turn = 0; this.log = []; this.memory = { forms: {}, lastAction: null, actions: {}, recent: [], patches: 0 };
     this.uid = 0;
     const p = this.addUnit({

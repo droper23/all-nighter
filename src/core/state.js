@@ -30,7 +30,7 @@ export function newGame(difficulty = 'standard') {
     build: { cpu: null, gpu: null, ram: [null, null], ramApps: ['patch', 'probe'], psu: null, cool: null, usb: [null, null] },
     tools: [], keys: ['student'], flags: {}, opened: {}, notes: [], cleared: {}, bosses: {}, visited: {}, outlets: [],
     quests: {}, hour: 2, lastOutlet: null, stats: { battles: 0, wins: 0, steps: 0 },
-    probed: {}, shifts: {}, shiftRuns: 0,
+    probed: {}, shifts: {}, shiftRuns: 0, habits: { forms: {}, actions: {} },
   };
   const give = (id, slot, idx) => { const p = makePart(id); s.parts.push(p); if (idx == null) s.build[slot] = p.uid; else s.build[slot][idx] = p.uid; };
   give('cpu_celery', 'cpu'); give('gpu_igpu', 'gpu'); give('ram_2gb', 'ram', 0); give('ram_2gb', 'ram', 1);
@@ -117,6 +117,7 @@ export const SAVE_VERSION = 2;
 export function migrate(s) {
   if (!s || typeof s !== 'object') return s;
   s.probed = s.probed || {}; s.shifts = s.shifts || {}; s.shiftRuns = s.shiftRuns || 0;
+  s.habits = s.habits || { forms: {}, actions: {} };
   s.flags = s.flags || {}; s.stats = s.stats || { battles: 0, wins: 0, steps: 0 };
   if (s.room === 'dorm_desk') { s.room = 'studio'; s.x = null; s.y = null; }
   s.version = SAVE_VERSION;

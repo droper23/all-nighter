@@ -22,7 +22,7 @@ export class Battle extends Phaser.Scene {
     const s = G.state;
     this.keys = new Input(this);
     this.stats = computeStats(s);
-    this.eng = new Engine({ player: s, stats: this.stats, enemies: data.group, diff: DIFFICULTY[s.difficulty], preempt: data.preempt, items: s.items, boss: data.boss, canFlee: data.canFlee, known: new Set(Object.keys(s.probed || {})), mods: data.mods });
+    this.eng = new Engine({ player: s, stats: this.stats, enemies: data.group, diff: DIFFICULTY[s.difficulty], preempt: data.preempt, items: s.items, boss: data.boss, canFlee: data.canFlee, known: new Set(Object.keys(s.probed || {})), mods: data.mods, habits: s.habits });
     this.sprites = new Map(); this.busy = true; this.menu = null; this.sub = null; this.ui = [];
     this.drawBackground(data.bg || 'lobby');
     this.layoutUnits(true);
@@ -195,7 +195,7 @@ export class Battle extends Phaser.Scene {
     const order = this.eng.preview(10);
     const x0 = 6, y0 = 4, cw = 22;
     const g = this.add.graphics().setDepth(600);
-    g.fillStyle(0x000000, 0.6).fillRect(x0 - 2, y0 - 2, 40 + order.length * cw, 28);
+    g.fillStyle(0x000000, 0.6).fillRect(x0 - 2, y0 - 2, 40 + order.length * cw, 38);
     this.timelineObjs.push(g, text(this, x0 + 1, y0 + 2, 'TURN', C.dim).setDepth(601), text(this, x0 + 1, y0 + 12, 'ORDER', C.dim).setDepth(601));
     order.forEach((u, i) => {
       const x = x0 + 36 + i * cw, y = y0, me = u.side === 'player';
@@ -566,6 +566,10 @@ export class Battle extends Phaser.Scene {
     const s = G.state;
     s.hp = Math.max(1, this.eng.player.hp);
     s.stats.battles++;
+    // MINIMA is watching: remember how Jules fights, across the whole night.
+    s.habits = s.habits || { forms: {}, actions: {} };
+    for (const [k, n] of Object.entries(this.eng.memory.forms)) s.habits.forms[k] = (s.habits.forms[k] || 0) + n;
+    for (const [k, n] of Object.entries(this.eng.memory.actions)) s.habits.actions[k] = (s.habits.actions[k] || 0) + n;
     if (outcome === 'win') {
       s.stats.wins++;
       const r = this.eng.rewards();

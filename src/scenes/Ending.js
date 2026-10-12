@@ -24,13 +24,29 @@ const EPILOGUE = {
   ],
 };
 
+// Pages earned by how Jules spent the night, inserted before the last page.
+function earned(s) {
+  const out = [];
+  const terms = ['ventner1', 'ventner2', 'ventner3'].filter(f => s.flags[f]).length;
+  if (terms === 3) out.push('Jules prints every one of Ventner\'s terminal logs and leaves them at the reception desk, on top of the 1979 visitor log. Under "out:", next to H. Ventner, someone finally writes a time.');
+  else if (s.notes.length >= 20) out.push('Jules keeps the notes. All of them. Dex turns them into a documentary that gets eleven views, nine of them from the history department.');
+  if (s.quests.soup === 'done') out.push('At noon, Mrs. Okafor makes Hal\'s pepper soup for everyone who slept in Hollis Hall. More pepper than you think. Nobody complains.');
+  if (s.flags.sleep_done) out.push('Jules gives Dex a notebook: fourteen dreams, written down word for word. Maya\'s GPA was fine. Tomás\'s group got an A. Bea asked if the loss going down was good. Jules tells her the truth: not always.');
+  else if (Object.keys(s.flags).some(k => k.startsWith('heard_'))) out.push('Some of the students remember a voice in the dark, asking them what they were dreaming about. They remember answering.');
+  if (s.quests.calc === 'done') out.push('Kev aces his physics final. He refuses to explain how.');
+  if (s.quests.silicon === 'done') out.push('Priya defends her thesis in May. Chapter four is short. It ends on time.');
+  if (s.flags.benchy_done) out.push('Five tiny boats sit on the windowsill of the Capstone Studio. Everyone who walks past straightens one.');
+  return out;
+}
+
 export class Ending extends Phaser.Scene {
   constructor() { super('Ending'); }
   create(data) {
     this.kind = data.kind || 'retrain';
     this.mode = null; this.creditsText = null;
     this.keys = new Input(this);
-    this.page = 0; this.lines = EPILOGUE[this.kind];
+    const base = EPILOGUE[this.kind];
+    this.page = 0; this.lines = [...base.slice(0, -1), ...earned(G.state), base[base.length - 1]];
     this.sky = this.add.graphics();
     this.t = 0;
     this.drawSky(0);
