@@ -8,7 +8,7 @@ export const DIFFICULTY = {
   deans:    { name: "Dean's List", desc: 'Brutal. Every turn counts. For build nerds.', enemyDmg: 1.4, enemyHp: 1.35, xp: 0.9, heat: 1.15, spd: 1.08 },
 };
 
-export const xpToNext = (L) => Math.floor(10 * Math.pow(L, 1.8));
+export const xpToNext = (L) => Math.floor(10 * Math.pow(L, 1.7));
 let uidCounter = 1;
 
 export function makePart(id, { plus = 0, perks = null } = {}) {

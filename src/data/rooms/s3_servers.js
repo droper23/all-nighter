@@ -98,7 +98,7 @@ export default {
     grid: [
       '###########D##########',
       '##rrrr##rrr.rrr##rrrr#',
-      '#....................#',
+      '#..................C.#',
       '#.rr.rr.rr.rr.rr.rr..#',
       '#.........1..........#',
       '#.rr.rr.rr.rr.rr.rr..E',
@@ -106,6 +106,7 @@ export default {
       '######################',
     ],
     ents: {
+      C: { type: 'box', loot: { app: 'dump' } },
       D: { type: 'door', to: 'srv_hall', at: 'G' },
       E: { type: 'door', to: 'raid_vault', at: 'A' },
       1: { type: 'enemy', group: ['cacheghoul', 'fanwraith'] },

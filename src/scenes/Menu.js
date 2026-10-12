@@ -7,6 +7,8 @@ import { PARTS, TIERS, FORMS, BRANDS, PERKS, SLOTS } from '../data/parts.js';
 import { APPS, ITEMS } from '../data/apps.js';
 import { NOTES } from '../data/notes.js';
 import { ROOMS, SECTORS } from '../data/rooms/index.js';
+import { QUESTS } from '../data/quests.js';
+import { ENEMIES } from '../data/enemies.js';
 
 const STAT_LABELS = [['maxHp', 'HP'], ['atk', 'ATK'], ['def', 'DEF'], ['spd', 'SPD'], ['crit', 'CRIT'], ['maxPwr', 'PWR'], ['regen', 'REGEN'], ['cool', 'COOL'], ['heatCap', 'HEATCAP']];
 const PSTAT = { atk: 'ATK', spd: 'SPD', def: 'DEF', hp: 'HP', pwr: 'PWR', regen: 'REGEN', cool: 'COOL', crit: 'CRIT', heatcap: 'HEATCAP' };
@@ -50,8 +52,8 @@ export class Menu extends Phaser.Scene {
     const s = G.state, st = computeStats(s);
     this.o(panel(this, 8, 8, 120, 160));
     this.o(text(this, 18, 16, 'PAUSED', C.accent));
-    const items = ['Build', 'Items', 'Notes', 'Map', 'Status', 'Settings', 'Title Screen', 'Resume'].map(l => ({ label: l }));
-    this.list = new ListMenu(this, 16, 32, 106, items, { rows: 8, lineH: 15, cursor, onSelect: (it, i) => this.pickMain(i), onBack: () => this.close() });
+    const items = ['Build', 'Items', 'Notes', 'Quests', 'Glitchdex', 'Map', 'Status', 'Settings', 'Title Screen', 'Resume'].map(l => ({ label: l }));
+    this.list = new ListMenu(this, 16, 32, 106, items, { rows: 10, lineH: 13, cursor, onSelect: (it, i) => this.pickMain(i), onBack: () => this.close() });
     this.objs.push({ destroy: () => this.list.destroy() });
     // summary
     this.o(panel(this, 136, 8, 336, 160));
@@ -75,7 +77,7 @@ export class Menu extends Phaser.Scene {
     this.o(text(this, 12, 252, 'Z/Enter select · X/Esc back · Tab: Build · M: Map', C.dim));
   }
   pickMain(i) {
-    [() => this.openBuild(), () => this.openItems(), () => this.openNotes(), () => this.openMap(), () => this.openStatus(), () => this.openSettings(), () => this.confirmTitle(), () => this.close()][i]();
+    [() => this.openBuild(), () => this.openItems(), () => this.openNotes(), () => this.openQuests(), () => this.openDex(), () => this.openMap(), () => this.openStatus(), () => this.openSettings(), () => this.confirmTitle(), () => this.close()][i]();
   }
 
   // ---------- BUILD ----------
@@ -331,6 +333,48 @@ export class Menu extends Phaser.Scene {
     this.list.onMove(items[0]);
   }
 
+  // ---------- QUESTS ----------
+  openQuests() {
+    this.clear(); this.mode = 'list';
+    const s = G.state;
+    this.o(panel(this, 8, 8, 170, 254)); this.o(text(this, 16, 14, 'QUESTS', C.accent));
+    this.o(panel(this, 184, 8, 288, 254));
+    const body = this.o(text(this, 192, 16, '', C.text));
+    const items = Object.entries(QUESTS).filter(([, q]) => q.status(s) !== 'hidden').map(([id, q]) => ({ label: (q.status(s) === 'done' ? '✓ ' : '• ') + q.title, id, color: q.status(s) === 'done' ? C.dim : C.text }));
+    if (!items.length) items.push({ label: '(no quests yet)', disabled: true });
+    this.list = new ListMenu(this, 14, 30, 160, items, {
+      rows: 19, lineH: 11,
+      onMove: (it) => { if (!it.id) return body.setText(wrapText('Talk to people. Read things. Some of them need help, even tonight.', 272).join('\n')); const q = QUESTS[it.id]; body.setText(wrapText(`${q.title.toUpperCase()}\nFrom: ${q.giver}\n\n${q.desc}\n\n${q.status(s) === 'done' ? 'COMPLETE.' : q.progress(s)}`, 272).join('\n')); },
+      onSelect: () => {}, onBack: () => this.openMain(3),
+    });
+    this.list.onMove(items[0]);
+  }
+
+  // ---------- GLITCHDEX ----------
+  openDex() {
+    this.clear(); this.mode = 'list';
+    const s = G.state, dex = s.dex || {}, probed = s.probed || {};
+    const all = Object.keys(ENEMIES);
+    const seen = all.filter(k => dex[k]);
+    this.o(panel(this, 8, 8, 170, 254)); this.o(text(this, 16, 14, `GLITCHDEX ${seen.length}/${all.length}`, C.accent));
+    this.o(panel(this, 184, 8, 288, 254));
+    const body = this.o(text(this, 192, 16, '', C.text));
+    const img = this.o(this.add.image(410, 200, '__DEFAULT').setVisible(false));
+    const items = all.map(k => dex[k] ? { label: ENEMIES[k].name, right: '×' + dex[k], k } : { label: '??????', k: null, color: C.dim });
+    this.list = new ListMenu(this, 14, 30, 160, items, {
+      rows: 19, lineH: 11,
+      onMove: (it) => {
+        if (!it.k) { img.setVisible(false); return body.setText('Not yet defeated.'); }
+        const e = ENEMIES[it.k];
+        const wr = probed[it.k] ? `Weak: ${e.weak.join(', ') || '-'}\nResists: ${e.resist.join(', ') || '-'}` : 'Weak/Resists: Probe it to find out.';
+        body.setText(wrapText(`${e.name.toUpperCase()}${e.boss ? '  [BOSS]' : ''}\n\n"${e.desc}"\n\nHP ${e.hp}  ATK ${e.atk}  DEF ${e.def}  SPD ${e.spd}\n${wr}\nDefeated: ${dex[it.k]}`, 272).join('\n'));
+        img.setTexture('bt_' + e.sprite).setVisible(true).setScale(e.boss ? 1.2 : 2).setOrigin(0.5, 1).setPosition(400, 250);
+      },
+      onSelect: () => {}, onBack: () => this.openMain(4),
+    });
+    this.list.onMove(items[0]);
+  }
+
   // ---------- MAP ----------
   openMap(direct = false) {
     this.clear(); this.mode = 'map'; this.direct = direct;
@@ -382,7 +426,7 @@ export class Menu extends Phaser.Scene {
       this.mapSector = this.mapSectors[i]; audio.sfx('move'); this.openMap(this.direct);
     } else if (this.keys.pressed('back') || this.keys.pressed('map') || this.keys.pressed('ok')) {
       this.mapSector = null;
-      if (this.direct) this.close(); else { audio.sfx('back'); this.openMain(3); }
+      if (this.direct) this.close(); else { audio.sfx('back'); this.openMain(5); }
     }
   }
 
@@ -424,8 +468,8 @@ export class Menu extends Phaser.Scene {
     const showDesc = (it) => desc.setText(it.k === 'diff' ? wrapText(DIFFICULTY[s.difficulty].desc, 290).join('\n') : '');
     this.list = new ListMenu(this, 16, 30, 284, items(), {
       rows: 6, lineH: 15, cursor,
-      onSelect: (it) => { if (it.k === 'back') return this.openMain(5); if (it.k === 'fs') { this.scale.toggleFullscreen(); this.time.delayedCall(100, () => this.list.setItems(items())); } },
-      onBack: () => this.openMain(5), onMove: showDesc,
+      onSelect: (it) => { if (it.k === 'back') return this.openMain(7); if (it.k === 'fs') { this.scale.toggleFullscreen(); this.time.delayedCall(100, () => this.list.setItems(items())); } },
+      onBack: () => this.openMain(7), onMove: showDesc,
     });
     this.settingsAdjust = (dir) => {
       const it = this.list.items[this.list.cursor];
@@ -441,15 +485,15 @@ export class Menu extends Phaser.Scene {
     this.o(text(this, 132, 100, wrapText('Return to title? Progress since your last Outlet save will be lost.', 220).join('\n'), C.text));
     this.list = new ListMenu(this, 140, 136, 200, [{ label: 'Stay' }, { label: 'Quit to title', color: C.bad }], {
       rows: 2, lineH: 12,
-      onSelect: (it, i) => { if (i === 0) return this.openMain(6); this.scene.stop('World'); this.scene.stop(); this.scene.start('Title'); },
-      onBack: () => this.openMain(6),
+      onSelect: (it, i) => { if (i === 0) return this.openMain(8); this.scene.stop('World'); this.scene.stop(); this.scene.start('Title'); },
+      onBack: () => this.openMain(8),
     });
   }
 
   update(time, delta) {
     if (this.mode === 'build') return this.updateBuild(delta);
     if (this.mode === 'map') return this.updateMap(delta);
-    if (this.mode === 'status') { if (this.keys.pressed('back') || this.keys.pressed('ok')) { audio.sfx('back'); this.openMain(4); } return; }
+    if (this.mode === 'status') { if (this.keys.pressed('back') || this.keys.pressed('ok')) { audio.sfx('back'); this.openMain(6); } return; }
     if (this.settingsAdjust && this.list && this.objs.length && this.list.items[0] && this.list.items[0].k === 'music') {
       if (this.keys.pressed('left')) return this.settingsAdjust(-1);
       if (this.keys.pressed('right')) return this.settingsAdjust(1);

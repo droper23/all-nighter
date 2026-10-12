@@ -108,6 +108,7 @@ export class Battle {
     if (u.statuses.hotfix && u.alive) ev.push(this.heal(u, Math.round(u.maxHp * 0.1)));
     if (u.kind === 'player' && u.alive) {
       if (this.stats.passives.has('cactus')) ev.push(this.heal(u, Math.round(u.maxHp * 0.04)));
+      if (this.stats.passives.has('thermos')) ev.push(this.heal(u, Math.round(u.maxHp * 0.05)));
       const shed = Math.min(u.heat, this.stats.cool);
       u.heat -= shed;
       const gain = Math.min(u.maxPwr - u.pwr, this.stats.regen);

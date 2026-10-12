@@ -123,7 +123,7 @@ export const ENEMIES = {
     moves: { deref: M('Dereference', 'charge', { delay: 70 }), segv: M('SEGFAULT', 'atk', { pow: 2.2 }), void: M('Free()', 'debuff', { pow: 0.4, status: ['purge', 0] }) }, ai: ['void', 'deref', 'segv'] },
   dangling: { name: 'Dangling Pointer', sprite: 'nullptr', hp: 90, atk: 24, def: 6, spd: 95, xp: 10, flex: 5, weak: ['scatter'], resist: [], minion: true,
     desc: 'Allocated by MINIMA. Points at you.', moves: { poke: M('Poke', 'atk', { pow: 1.0 }), leak: M('Memory Leak', 'debuff', { pow: 0.4, status: ['glitched', 2] }) }, ai: ['poke', 'leak'] },
-  minima: { name: 'MINIMA', sprite: 'minima', boss: true, hp: 820, atk: 34, def: 14, spd: 100, xp: 0, flex: 0, weak: [], resist: [],
+  minima: { name: 'MINIMA', sprite: 'minima', boss: true, hp: 760, atk: 28, def: 14, spd: 100, xp: 0, flex: 0, weak: [], resist: [],
     desc: 'Your capstone. Minimizes loss. Has decided you are loss.',
     moves: {
       descent: M('Gradient Descent', 'debuff', { pow: 0.6, status: ['throttled', 2] }), epoch: M('Epoch', 'multi', { pow: 0.5, hits: 4 }),

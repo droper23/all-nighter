@@ -499,7 +499,9 @@ export class World extends Phaser.Scene {
     ent.sprite && ent.sprite.destroy();
     this.ents = this.ents.filter(x => x !== ent);
     const label = { note: 'Sticky Note', drive: 'Lost Flash Drive', email: 'Open Email', page: 'Notebook Page', flyer: 'Flyer', log: 'Terminal Log' }[n.kind] || 'Note';
-    this.runScript([{ who: 'sys', name: `${label}: ${n.title}`, text: n.text }, { who: 'sys', text: `(Saved to Notes. ${s.notes.length} found.)` }]);
+    const reward = [10, 20, 30].find(t => s.notes.length >= t && !s.flags['lore' + t]);
+    if (reward) s.flags['lore' + reward] = true;
+    this.runScript([{ who: 'sys', name: `${label}: ${n.title}`, text: n.text }, { who: 'sys', text: `(Saved to Notes. ${s.notes.length} found.)` }, ...(reward ? SCRIPTS.lore_reward(reward) : [])]);
   }
   openBox(ent) {
     const s = G.state;

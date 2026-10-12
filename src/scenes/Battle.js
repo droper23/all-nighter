@@ -301,6 +301,7 @@ export class Battle extends Phaser.Scene {
       }
       case 'probe': {
         const d = e.u.data;
+        G.state.probed = G.state.probed || {}; G.state.probed[e.u.key] = true;
         const w = d.weak.length ? 'Weak: ' + d.weak.join(', ') : 'No weakness';
         const r = d.resist.length ? '  Resists: ' + d.resist.join(', ') : '';
         this.setLog(`${e.u.name}: ${w}${r}`); audio.sfx('tool'); return 900;
@@ -430,6 +431,8 @@ export class Battle extends Phaser.Scene {
     if (outcome === 'win') {
       s.stats.wins++;
       const r = this.eng.rewards();
+      s.dex = s.dex || {};
+      r.killed.forEach(k => { s.dex[k] = (s.dex[k] || 0) + 1; });
       s.flex += r.flex;
       const ups = gainXp(s, r.xp);
       if (!ups.length) s.hp = Math.max(1, this.eng.player.hp);

@@ -104,10 +104,11 @@ export default {
       '#.T..T..T.....T..T...#',
       '#.h..h..h..1..h..h...#',
       '#..........2.........#',
-      '#.3..................#',
+      '#.3................C.#',
       '######################',
     ],
     ents: {
+      C: { type: 'box', loot: { app: 'sudo' } },
       D: { type: 'door', to: 'arc_reading', at: 'D' },
       1: { type: 'terminal', script: 'ventner_t1' },
       2: { type: 'enemy', group: ['inkblot', 'overdue'] },

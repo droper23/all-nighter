@@ -89,6 +89,10 @@ export const PARTS = Object.fromEntries([
   P('usb_mug', 'usb', 'Mug Warmer', 2, {}, { passive: 'mug', desc: 'Start battles at 40 Heat, but +20% damage while Heat > 50.' }),
   P('usb_turret', 'usb', 'Mouse Turret', 3, {}, { drone: 'turret', desc: 'Deploys a Turret at battle start. Fires every turn.' }),
   P('usb_hub', 'usb', 'Octo Hub', 3, { pwr: 6, regen: 1 }, { desc: 'Eight ports. Every one is used.' }),
+  P('usb_thermos', 'usb', "Okafor's Thermos", 3, { cool: 4, def: 3 }, { passive: 'thermos', desc: 'Pepper soup, still hot after 40 years of night shifts. Regain 5% HP each turn.' }),
+  P('usb_ti84', 'usb', "Kev's TI-84", 2, { crit: 6, spd: 2 }, { desc: 'PROPERTY OF KEV. The programs include a dating sim and a perfect physics solver.' }),
+  P('usb_dex', 'usb', "Dex's Lucky Controller", 4, { spd: 8, crit: 6, atk: 3 }, { desc: 'Sticky. Lucky. Mailed with a note: "for the lore nerd".' }),
+  P('gpu_priya', 'gpu', "Priya's Thesis Accelerator", 3, { atk: 22, pwr: 4, crit: 3 }, { form: 'batch', desc: 'Five years of grad school in one card. Hits everything, like a deadline.' }),
   P('usb_ventner', 'usb', "Ventner's Thumb Drive", 4, { atk: 4, spd: 4, def: 4 }, { passive: 'ventner', desc: 'Labelled "H.V. — DO NOT RUN". Revives you once per battle at 30%.' }),
 ].map(p => [p.id, p]));
 

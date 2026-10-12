@@ -26,7 +26,7 @@ export default {
     grid: [
       '###########D##############',
       '##pp##pp##p.p##pp##pp##pp#',
-      '#........................#',
+      '#...................C....#',
       '#..wwww..........wwww....#',
       'A..wwww....1.....wwww....E',
       '#........................#',
@@ -35,6 +35,7 @@ export default {
       '###########G##############',
     ],
     ents: {
+      C: { type: 'read', script: 'calculator' },
       A: { type: 'door', to: 'tun_entry', at: 'E' },
       D: { type: 'door', to: 'tun_cables', at: 'G' },
       E: { type: 'door', to: 'tun_pump', at: 'A' },
@@ -97,10 +98,11 @@ export default {
       '#..............pp....p...#',
       '#.ww..ww.......pp....D...E',
       '#.ww..ww....2........p...#',
-      '#....................p...#',
+      '#..C.................p...#',
       '####################K#####',
     ],
     ents: {
+      C: { type: 'box', loot: { app: 'forkbomb' } },
       A: { type: 'door', to: 'tun_junction', at: 'E' },
       E: { type: 'door', to: 'router_core', at: 'A' },
       1: { type: 'enemy', group: ['pipemimic', 'steamhound'] },

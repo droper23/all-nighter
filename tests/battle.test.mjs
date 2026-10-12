@@ -50,7 +50,7 @@ const CASES = [
   ['raid', 10, [['gpu', 'gpu_array'], ['cpu', 'cpu_v6'], ['psu', 'psu_gold'], ['cool', 'cool_aio']], ['drive', 'drive', 'drive', 'drive', 'drive']],
   ['thesis', 13, [['gpu', 'gpu_lancet'], ['cpu', 'cpu_h8'], ['psu', 'psu_gold'], ['cool', 'cool_block']], ['thesis']],
   ['hydra', 16, [['gpu', 'gpu_lancet2'], ['cpu', 'cpu_k8'], ['psu', 'psu_ti'], ['cool', 'cool_halo']], ['hydra', 'port', 'port', 'port']],
-  ['minima', 20, [['gpu', 'gpu_raster3'], ['cpu', 'cpu_k8'], ['psu', 'psu_over'], ['cool', 'cool_halo']], ['minima']],
+  ['minima', 17, [['gpu', 'gpu_raster3'], ['cpu', 'cpu_k8'], ['psu', 'psu_over'], ['cool', 'cool_halo']], ['minima']],
 ];
 
 for (const [name, lvl, gear, foes] of CASES) {

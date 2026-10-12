@@ -66,7 +66,32 @@ S.laptop = (s) => s.flags.intro_done ? [
   { who: 'jules', text: 'Forty-one. Including me.' },
 ] : [{ who: 'sys', text: 'Your laptop.' }];
 S.sleep_a = [{ who: 'student', name: 'Sleeping student (Maya)', text: '...my GPA is a float... it keeps... rounding down...' }];
-S.sleep_b = [{ who: 'student', name: 'Sleeping student (Kev)', text: '...five more minutes... five more epochs... has anyone seen my calculator...' }];
+S.sleep_b = (s) => {
+  if (s.quests.calc === 'done') return [{ who: 'student', name: 'Sleeping student (Kev)', text: '...calculator... found... smiling in my sleep... thank you, whoever you are...' }];
+  if (s.flags.has_calc) return [
+    { who: 'sys', text: 'You set the TI-84 on Kev\'s desk. Still asleep, Kev reaches out, pats it twice, and hands you something from his pocket without opening his eyes.' },
+    { who: 'student', name: 'Sleeping student (Kev)', text: '...take the spare... I have two... nobody believes me...' },
+    { give: { part: 'usb_ti84' } },
+    { call: () => { s.quests.calc = 'done'; } },
+  ];
+  return [{ who: 'student', name: 'Sleeping student (Kev)', text: '...five more minutes... five more epochs... has anyone seen my calculator...' }];
+};
+S.calculator = (s) => (s.flags.has_calc || s.quests.calc === 'done') ? [{ who: 'sys', text: 'A dry spot on the pipe where a calculator used to be.' }] : [
+  { who: 'sys', text: 'Wedged behind a pipe: a TI-84, engraved "PROPERTY OF KEV". It is running a program called LOVE.8XP.' },
+  { set: 'has_calc' },
+  { call: () => { s.quests.calc = 'active'; } },
+  { who: 'sys', text: 'Quest: Kev\'s Calculator. Return it to Kev in the Capstone Studio.' },
+];
+S.cookbook = (s) => s.quests.soup === 'active' && !s.flags.has_cookbook ? [
+  { who: 'sys', text: 'A blue cookbook, spine cracked at one page: "HAL\'S PEPPER SOUP — for M., on Fridays." The margins are full of tiny hearts and one note: "more pepper than you think."' },
+  { set: 'has_cookbook' },
+  { who: 'sys', text: 'You take the cookbook for Mrs. Okafor.' },
+] : [{ who: 'sys', text: 'A shelf of cookbooks. Every bookmark is in a soup recipe.' }];
+S.lore_reward = (n) => ({
+  10: [{ who: 'dex', text: 'yo 10 notes?? im making a documentary. "HOLLIS: THE HAUNTED WIFI". sending u a care package via okafor' }, { give: { mat: 'silicon', n: 2 } }, { give: { flex: 150 }, quiet: true }],
+  20: [{ who: 'dex', text: '20 NOTES. the ventner stuff is so sad?? ok sending u my good USB hub. dont ask where i got it' }, { give: { part: 'usb_hub' } }, { give: { mat: 'silicon', n: 2 } }],
+  30: [{ who: 'dex', text: '30. thats basically everything. ur a legend. sending my lucky controller. it has carried me thru 4 finals' }, { give: { part: 'usb_dex' } }],
+}[n]);
 S.sleep_c = [{ who: 'student', name: 'Sleeping student (Ines)', text: '...sudo make me a sandwich... okay... ' }];
 S.sleep_d = [{ who: 'student', name: 'Sleeping student (Tomás)', text: '...it says if we hold very still... we all get an A...' }];
 S.sleep_e = [{ who: 'student', name: 'Sleeping student (Bea)', text: '...the loss... is going down... isn\'t that good... Jules...?' }];
@@ -96,6 +121,20 @@ S.okafor = (s) => {
     7: 'The basement. Be careful, Jules. That machine has been waiting a long time for someone to talk to.',
     8: 'Look at that sky. You did good, baby. Now go sleep for a week.',
   };
+  if (s.quests.soup === 'active' && s.flags.has_cookbook) return [
+    { who: 'okafor', text: 'Is that... the blue cookbook. Oh, Jules. Oh, baby.' },
+    { who: 'okafor', text: 'Marguerite Ventner hired me in 1984. Night supervisor. She made this soup every Friday and never once told me the recipe. "It is Hal\'s," she said. "He will tell you himself."' },
+    { who: 'okafor', text: 'I will make it for everyone when they wake up. Here, take my thermos. Forty years. It has never once gone cold.' },
+    { give: { part: 'usb_thermos' } },
+    { call: () => { s.quests.soup = 'done'; } },
+  ];
+  if (s.hour >= 4 && !s.quests.soup) return [
+    { who: 'okafor', text: 'You know, I worked for his wife. Marguerite Ventner. Night supervisor, 1984. She waited for him every single night until she retired.' },
+    { who: 'okafor', text: 'She used to make his pepper soup. Said the recipe was in his blue cookbook, down in his office in B2. She never could bring herself to go get it.' },
+    { who: 'okafor', text: 'If you are going down there anyway... I would like to read it. Just once.' },
+    { call: () => { s.quests.soup = 'active'; } },
+    { who: 'sys', text: 'New quest: Pepper Soup.' },
+  ];
   return [{ who: 'okafor', text: lines[s.hour] || lines[2] }, { choice: [{ label: 'Shop', then: [shop] }, { label: 'Talk', then: [{ who: 'okafor', text: S.okaforTalk(s) }] }, { label: 'Bye', then: [] }] }];
 };
 S.okaforTalk = (s) => [
@@ -175,6 +214,23 @@ S.priya = (s) => {
     { who: 'priya', text: 'Jules. You beat the THESIS. Do you know how many people that thing has eaten? Including, almost, me?' },
     { who: 'priya', text: 'Take my last riser. Four sticks. Run everything at once. Be reckless, but on purpose.' },
     { give: { ram: 'ram4' } },
+  ];
+  if (s.quests.silicon === 'active' && s.mats.silicon >= 3) return [
+    { who: 'priya', text: 'Is that SILICON? Three of them? Jules. JULES.' },
+    { choice: [
+      { label: 'Give 3 Silicon', then: [
+        { call: () => { s.mats.silicon -= 3; s.quests.silicon = 'done'; } },
+        { who: 'priya', text: 'My thesis rig lives! And you get the card I\'ve been hoarding. Batch form, tuned by hand. Don\'t tell my advisor.' },
+        { give: { part: 'gpu_priya' } },
+      ] },
+      { label: 'Not yet', then: [{ who: 'priya', text: 'Okay. They\'re yours. I\'ll just... stare at them.' }] },
+    ] },
+  ];
+  if (!s.quests.silicon && s.hour >= 3) return [
+    { who: 'priya', text: 'Hey. Favor. My thesis rig needs 3 Silicon wafers and the department budget is a rounding error.' },
+    { who: 'priya', text: 'Glitches drop them sometimes, and you can get some salvaging good parts. Bring me 3 and I\'ll make it worth your while.' },
+    { call: () => { s.quests.silicon = 'active'; } },
+    { who: 'sys', text: 'New quest: Thesis Rig.' },
   ];
   const tips = [
     'Every brand has a set bonus. Kilobyte loves speed. Vortex runs hot on purpose. Monolith is a wall. Halcyon is all about Power.',
