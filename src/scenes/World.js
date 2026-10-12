@@ -319,7 +319,13 @@ export class World extends Phaser.Scene {
 
   frontEnt() {
     const [dx, dy] = DIRS[this.facing];
-    const px = this.player.x + dx * 12, py = this.player.y - 5 + dy * 12;
+    for (const reach of [10, 17]) {
+      const r = this.probeAt(this.player.x + dx * reach, this.player.y - 5 + dy * reach);
+      if (r.ent) return r;
+    }
+    return this.probeAt(this.player.x + dx * 12, this.player.y - 5 + dy * 12);
+  }
+  probeAt(px, py) {
     const tx = Math.floor(px / T), ty = Math.floor(py / T);
     let best = null;
     for (const e of this.ents) {

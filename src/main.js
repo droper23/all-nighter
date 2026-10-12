@@ -9,7 +9,7 @@ import { Bench } from './scenes/Bench.js';
 import { Ending } from './scenes/Ending.js';
 import { G, newGame } from './core/state.js';
 
-G.version = '1.0.0';
+G.version = '1.0.1';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
